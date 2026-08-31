@@ -1,7 +1,7 @@
 // Data access: manifest, lazily loaded name shards, imagery index, live detail via the API proxy.
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-export const CDN = "https://source.roboflow.com/";
+export const CDN = "/img/";   // same-origin proxy (vercel.json rewrite) so thumbnails work as WebGL textures
 export const thumbUrl = key => `${CDN}${key}/thumb.jpg`;      // 200px wide
 export const originalUrl = key => `${CDN}${key}/original.jpg`;
 
