@@ -54,7 +54,7 @@ export async function imageryFor(slug) {
 const detailCache = new Map();
 export async function detailFor(slug) {
   if (detailCache.has(slug)) return detailCache.get(slug);
-  const p = fetch(`/api/dataset/${slug}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const [ws, proj] = slug.split("/"); const p = fetch(`/api/dataset?ws=${encodeURIComponent(ws)}&proj=${encodeURIComponent(proj)}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
   detailCache.set(slug, p);
   return p;
 }
