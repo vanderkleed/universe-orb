@@ -1,0 +1,156 @@
+{
+ "built": "2026-08-31T02:54:24.133Z",
+ "total": 330601,
+ "imaged": 3491,
+ "shardSize": 8000,
+ "galaxies": {
+  "Microscopy": {
+   "n": 1660,
+   "shards": [
+    "names/microscopy-0.json"
+   ]
+  },
+  "Medical": {
+   "n": 8660,
+   "shards": [
+    "names/medical-0.json",
+    "names/medical-1.json"
+   ]
+  },
+  "Fire": {
+   "n": 4204,
+   "shards": [
+    "names/fire-0.json"
+   ]
+  },
+  "Security": {
+   "n": 9473,
+   "shards": [
+    "names/security-0.json",
+    "names/security-1.json"
+   ]
+  },
+  "Safety": {
+   "n": 9475,
+   "shards": [
+    "names/safety-0.json",
+    "names/safety-1.json"
+   ]
+  },
+  "Waste": {
+   "n": 7028,
+   "shards": [
+    "names/waste-0.json"
+   ]
+  },
+  "Insects": {
+   "n": 2114,
+   "shards": [
+    "names/insects-0.json"
+   ]
+  },
+  "Marine": {
+   "n": 4368,
+   "shards": [
+    "names/marine-0.json"
+   ]
+  },
+  "Agriculture": {
+   "n": 18546,
+   "shards": [
+    "names/agriculture-0.json",
+    "names/agriculture-1.json",
+    "names/agriculture-2.json"
+   ]
+  },
+  "Aerial": {
+   "n": 3820,
+   "shards": [
+    "names/aerial-0.json"
+   ]
+  },
+  "Mobility": {
+   "n": 22046,
+   "shards": [
+    "names/mobility-0.json",
+    "names/mobility-1.json",
+    "names/mobility-2.json"
+   ]
+  },
+  "Wildlife": {
+   "n": 9766,
+   "shards": [
+    "names/wildlife-0.json",
+    "names/wildlife-1.json"
+   ]
+  },
+  "Retail": {
+   "n": 5033,
+   "shards": [
+    "names/retail-0.json"
+   ]
+  },
+  "Sports": {
+   "n": 10412,
+   "shards": [
+    "names/sports-0.json",
+    "names/sports-1.json"
+   ]
+  },
+  "Food": {
+   "n": 3971,
+   "shards": [
+    "names/food-0.json"
+   ]
+  },
+  "Gesture": {
+   "n": 14770,
+   "shards": [
+    "names/gesture-0.json",
+    "names/gesture-1.json"
+   ]
+  },
+  "Industrial": {
+   "n": 16170,
+   "shards": [
+    "names/industrial-0.json",
+    "names/industrial-1.json",
+    "names/industrial-2.json"
+   ]
+  },
+  "Games": {
+   "n": 8869,
+   "shards": [
+    "names/games-0.json",
+    "names/games-1.json"
+   ]
+  },
+  "Uncharted": {
+   "n": 170216,
+   "shards": [
+    "names/uncharted-0.json",
+    "names/uncharted-1.json",
+    "names/uncharted-2.json",
+    "names/uncharted-3.json",
+    "names/uncharted-4.json",
+    "names/uncharted-5.json",
+    "names/uncharted-6.json",
+    "names/uncharted-7.json",
+    "names/uncharted-8.json",
+    "names/uncharted-9.json",
+    "names/uncharted-10.json",
+    "names/uncharted-11.json",
+    "names/uncharted-12.json",
+    "names/uncharted-13.json",
+    "names/uncharted-14.json",
+    "names/uncharted-15.json",
+    "names/uncharted-16.json",
+    "names/uncharted-17.json",
+    "names/uncharted-18.json",
+    "names/uncharted-19.json",
+    "names/uncharted-20.json",
+    "names/uncharted-21.json"
+   ]
+  }
+ }
+}

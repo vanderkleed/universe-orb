@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Universe · Roboflow explorer</title>
+  <meta name="description" content="Fly a mirrored orb through every public dataset on Roboflow Universe.">
+  <meta name="color-scheme" content="dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=Space+Mono&display=swap">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <canvas id="gl" aria-label="Interactive universe of Roboflow datasets"></canvas>
+  <div class="vignette"></div>
+  <div class="grid"></div>
+  <div class="flash" id="flash"></div>
+
+  <nav>
+    <div class="wordmark">Universe <small>Roboflow · explorer</small></div>
+    <div class="navr">
+      <div class="stats" id="stats"></div>
+      <button class="btn" id="rnd">Random jump <kbd>R</kbd></button>
+    </div>
+  </nav>
+
+  <div class="rail" id="rail" role="navigation" aria-label="Galaxies"></div>
+  <div class="strip" id="strip"></div>
+
+  <div class="readout" aria-live="polite">
+    <div class="k" id="ro-k">Ahead</div>
+    <div class="name" id="ro-name">—</div>
+    <div class="meta" id="ro-meta"></div>
+  </div>
+
+  <div class="inst">
+    <div><b>range</b> <span class="v" id="rng">—</span> &nbsp; <b>sector</b> <span class="v" id="sec">—</span></div>
+    <div class="help"><b>click</b> fly there &nbsp; <b>drag</b> look &nbsp; <b>scroll</b> pull back &nbsp; <b>esc</b> release</div>
+  </div>
+
+  <div class="tag" id="tag"></div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="top"><span id="dr-dom">—</span><button id="dr-close" aria-label="Close">close ✕</button></div>
+    <div class="body" id="dr-body">
+      <div class="figure" id="fig">
+        <img id="dr-img" alt="" crossorigin="anonymous" onerror="this.style.opacity=0" onload="this.style.opacity=1">
+        <div class="cap" id="cap"></div>
+      </div>
+      <div><h2 id="dr-name"></h2><div class="by" id="dr-by"></div></div>
+      <div id="sec-samples"><div class="lbl"><span>Sample images</span><a id="dr-all" target="_blank" rel="noopener">All images ↗</a></div><div class="samples" id="samples"></div></div>
+      <div class="kv" id="kv">
+        <div><div class="l">Images</div><div class="v" id="dr-images">—</div></div>
+        <div><div class="l">Classes</div><div class="v" id="dr-classes">—</div></div>
+        <div><div class="l">Models</div><div class="v" id="dr-models">—</div></div>
+      </div>
+      <div id="sec-bars"><div class="lbl"><span>Annotations by class</span><span id="dr-anncount"></span></div><div class="bars" id="bars"></div></div>
+      <div id="sec-split"><div class="lbl"><span>Split</span></div><div class="split" id="split"></div><div class="splitl" id="splitl"></div></div>
+      <div><div class="lbl"><span>Details</span></div><div class="facts" id="facts"></div></div>
+      <div class="prose" id="dr-note"></div>
+      <a class="go" id="dr-link" target="_blank" rel="noopener">Open on Universe <small>↗</small></a>
+    </div>
+  </aside>
+
+  <div class="intro" id="intro"><div><h1>Universe</h1><p id="intro-p">Charting</p></div></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

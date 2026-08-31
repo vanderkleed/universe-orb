@@ -1,0 +1,23 @@
+name: Rebuild index
+on:
+  schedule:
+    - cron: "17 6 * * *"      # nightly, 06:17 UTC
+  workflow_dispatch:
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node pipeline/build-index.mjs
+      - run: BATCH=15000 RATE=4 node pipeline/build-imagery.mjs
+      - run: node pipeline/build-index.mjs --from raw
+      - name: Commit data
+        run: |
+          git config user.name "universe-orb bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add public/data pipeline/cache/slugs.json
+          git diff --cached --quiet || git commit -m "index: nightly rebuild"
+          git push
