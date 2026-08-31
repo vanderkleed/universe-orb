@@ -62,6 +62,9 @@ R: random jump · Esc: release. Deep links: `#workspace/project` or `#galaxy/mob
 
 - Galaxy assignment is keyword-based on the slug (`pipeline/classify.mjs`); `pipeline/curated.json` overrides.
 - The sitemaps omit some public projects; the pipeline keeps every slug it has ever seen, and the
+
+Deployed at universe-orb.vercel.app (auto-deploys from main).
+
   search-harvested extras, so the count only grows.
 - Sample images come from the project page gallery (up to 8) and are not yet indexed for most datasets.
 - Mobile: touch works (tap to fly, drag to look); the rail collapses to a strip.
