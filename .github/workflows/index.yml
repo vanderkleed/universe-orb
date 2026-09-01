@@ -12,7 +12,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: node pipeline/build-index.mjs
-      - run: BATCH=15000 RATE=4 node pipeline/build-imagery.mjs
+      - name: Collect imagery (API when a key is present, page scrape otherwise)
+        env:
+          ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
+        run: |
+          if [ -n "$ROBOFLOW_API_KEY" ]; then BATCH=15000 RATE=4 node pipeline/build-imagery-api.mjs
+          else BATCH=15000 RATE=4 node pipeline/build-imagery.mjs; fi
       - run: node pipeline/build-index.mjs --from raw
       - name: Commit data
         run: |
