@@ -1,9 +1,9 @@
-/* Universe Orb — Roboflow design system: Suisse Int'l, Geist Mono, 52px nav, #121110 / #F4F2EC.
-   Suisse Int'l is licensed: the woff2 files live in /public/fonts (not in Google Fonts); until they
-   exist the stack falls back to Helvetica Neue, which keeps the same grotesk voice. */
-@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntl-Regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
-@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntl-RegularItalic.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
-@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntl-Medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+/* Universe Orb — Roboflow design system: Suisse Int'l, Geist Mono, 52px nav, #121110 / #F4F2EC. */
+/* Suisse Int'l is licensed, so the woff2 files are not committed by machine — they are uploaded
+   directly to /public/fonts (names below match the brand kit exactly). Fallback: Helvetica Neue. */
+@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlRegular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlRegularIt.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlMedium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
 :root{
     --ground:#121110; --ink:#F4F2EC; --mute:#8F8B83; --dim:#4D4A45;
     --hair:rgba(244,242,236,.10); --grid:rgba(244,242,236,.03);
