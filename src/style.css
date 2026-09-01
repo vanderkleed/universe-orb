@@ -144,3 +144,22 @@
   .btn.on::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink);box-shadow:0 0 8px var(--ink)}
   @media (max-width:720px){#snd kbd{display:none}}
   @media (max-width:1100px){.stats{display:none}}
+  /* guide + hints */
+  #help{padding:8px 11px}
+  .guide{position:fixed;inset:0;z-index:18;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .guide[hidden]{display:none}
+  .guide .card{pointer-events:auto;width:min(460px,calc(100vw - 40px));background:rgba(18,17,16,.92);backdrop-filter:blur(10px);border:1px solid var(--hair);padding:26px 28px;animation:guidein .5s cubic-bezier(.2,.8,.2,1)}
+  @keyframes guidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .guide h2{font-family:var(--serif);font-weight:400;font-size:26px;margin:0 0 10px}
+  .guide p{font-family:var(--serif);font-size:15px;line-height:1.5;color:var(--mute);margin:0 0 16px}
+  .guide .keysg{display:flex;flex-direction:column;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:14px 0;margin-bottom:18px}
+  .guide kbd{font-family:inherit;color:var(--ink);border:1px solid var(--hair);padding:1px 5px;font-size:9px}
+  .guide .row{display:flex;gap:14px;align-items:center}
+  .guide .go-btn{all:unset;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ground);background:var(--ink);padding:10px 16px}
+  .guide .go-btn:hover,.guide .go-btn:focus-visible{outline:none;box-shadow:0 0 0 1px var(--ink)}
+  .guide .quiet{all:unset;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding:10px 4px}
+  .guide .quiet:hover,.guide .quiet:focus-visible{color:var(--ink);outline:none}
+  .hint{position:fixed;left:50%;bottom:96px;transform:translate(-50%,8px);z-index:14;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:rgba(18,17,16,.9);border:1px solid var(--hair);padding:10px 14px;opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;white-space:nowrap;max-width:90vw}
+  .hint.show{opacity:1;transform:translate(-50%,0)}
+  .hint kbd{font-family:inherit;border:1px solid var(--hair);padding:0 4px}
+  @media (max-width:720px){.hint{white-space:normal;text-align:center}.guide .keysg div:first-child{display:none}}
