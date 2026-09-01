@@ -7,7 +7,7 @@
 // Output (public/data):
 //   manifest.json            galaxies with counts, layout seeds, totals, build date
 //   names/<galaxy>-<n>.json  shards of [slug, lastmod] for every public dataset
-//   imagery.json             [slug, galaxy, index, coverKey] derived from imagery/*.json (build-imagery.mjs)
+//   imagery.json             [slug, galaxy, index, coverKey, imageCount] derived from imagery/*.json (build-imagery.mjs)
 //
 // Runs with no API key. The sitemaps list most but not all public projects, so slugs already known
 // from previous runs, the curated list, and the imagery shards are kept.
@@ -100,9 +100,12 @@ async function main() {
   const where = new Map();
   for (const dom in byDom) byDom[dom].forEach(([slug], j) => where.set(slug, [dom, j]));
   const imagery = [];
+  // image counts: from the shards when the page has been scraped since counts were added,
+  // otherwise carried forward from the previous imagery.json so they never regress to 0
+  const prevN = new Map(); try { for (const e of JSON.parse(await fs.readFile(path.join(OUT, "imagery.json"), "utf8"))) if (e[4]) prevN.set(e[0], e[4]); } catch {}
   for (let i = 0; i < 64; i++) {
     let sh = {}; try { sh = JSON.parse(await fs.readFile(path.join(OUT, `imagery/${i}.json`), "utf8")); } catch { continue; }
-    for (const [slug, v] of Object.entries(sh)) { const w = where.get(slug); if (v.c && w) imagery.push([slug, w[0], w[1], v.c]); }
+    for (const [slug, v] of Object.entries(sh)) { const w = where.get(slug); if (v.c && w) imagery.push([slug, w[0], w[1], v.c, v.n || prevN.get(slug) || 0]); }
   }
   await fs.writeFile(path.join(OUT, "imagery.json"), JSON.stringify(imagery));
   const manifest = {
