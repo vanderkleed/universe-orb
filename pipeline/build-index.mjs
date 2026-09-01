@@ -20,13 +20,14 @@ const ROOT = new URL("..", import.meta.url).pathname;
 const OUT = path.join(ROOT, "public/data");
 const CACHE = path.join(ROOT, "pipeline/cache");
 const SHARD = 8000;
-const UA = "universe-orb-indexer (+https://github.com/roboflow)";
+const UA = process.env.UA || "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 universe-orb-indexer";
 
 async function fetchText(url, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { headers: { "user-agent": UA } });
+      const r = await fetch(url, { headers: { "user-agent": UA, "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "accept-language": "en-US,en;q=0.9" } });
       if (r.ok) return await r.text();
+      console.warn(`  ${r.status} ${url}`);
       if (r.status === 429) await sleep(2000 * (i + 1));
     } catch (e) { await sleep(800 * (i + 1)); }
   }
@@ -65,8 +66,16 @@ async function main() {
   if (process.argv.includes("--from")) {
     roots = new Map(Object.entries(JSON.parse(await fs.readFile(path.join(CACHE, "slugs.json"), "utf8"))));
   } else {
-    roots = await crawlSitemaps();
-    await fs.writeFile(path.join(CACHE, "slugs.json"), JSON.stringify(Object.fromEntries(roots)));
+    try {
+      roots = await crawlSitemaps();
+      await fs.writeFile(path.join(CACHE, "slugs.json"), JSON.stringify(Object.fromEntries(roots)));
+    } catch (e) {
+      // the sitemap host sometimes refuses datacenter IPs; fall back to the cached catalog so the
+      // rest of the pipeline (imagery, counts) still runs on what we already know
+      console.warn("sitemap crawl failed (" + e.message + ") — using cached slugs.json");
+      roots = new Map(Object.entries(JSON.parse(await fs.readFile(path.join(CACHE, "slugs.json"), "utf8").catch(() => "{}"))));
+      if (!roots.size) throw e;
+    }
   }
   // keep datasets we know about that the sitemaps omit
   const prior = JSON.parse(await fs.readFile(path.join(CACHE, "slugs.json"), "utf8").catch(() => "{}"));
