@@ -3,7 +3,7 @@
 // and cached (LRU). Anything beyond range stays a star.
 import * as THREE from "three";
 import { SHADE, DOT, dither } from "./textures.js";
-import { starAt } from "./universe.js";
+import { starAt, starNow, now } from "./universe.js";
 import { thumbUrl } from "./data.js";
 
 const POOL = 240, RANGE = 150, CACHE_MAX = 900;
@@ -20,16 +20,15 @@ function texture(url, cb) {
 
 export function buildPlanets(scene, layout, imagery) {
   // imagery: [ [slug, galaxy, index, coverKey], ... ]
+  // Each item's pos is refreshed from the orbit model (galaxies rotate), so positions are never cached for long.
   const items = []; const v = new THREE.Vector3();
   for (const [slug, dom, j, cover] of imagery) {
     const G = layout.galaxies[dom]; if (!G) continue;
     const sz = starAt(G, j, v);
-    items.push({ slug, dom, j, cover, pos: v.clone(), size: 0.55 + sz * 0.55, mesh: null });
+    items.push({ slug, dom, j, G, cover, pos: v.clone(), size: 0.55 + sz * 0.55, mesh: null });
   }
-  const CELL = 30; const grid = new Map();
-  const key = (x, y, z) => ((Math.floor(x / CELL) + 512) * 1024 + (Math.floor(y / CELL) + 512)) * 1024 + (Math.floor(z / CELL) + 512);
-  items.forEach((it, i) => { const k = key(it.pos.x, it.pos.y, it.pos.z); let a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push(i); });
   const bySlug = new Map(items.map(it => [it.slug, it]));
+  const update = (it, t = now()) => starNow(it.G, it.j, t, it.pos);
 
   const pool = []; const group = new THREE.Group(); scene.add(group);
   for (let i = 0; i < POOL; i++) {
@@ -42,12 +41,10 @@ export function buildPlanets(scene, layout, imagery) {
     group.add(m); pool.push(m);
   }
 
+  // a few thousand items: brute force with fresh positions is cheap and always correct
   function near(p, range) {
-    const out = []; const c = Math.ceil(range / CELL); const cx = Math.floor(p.x / CELL), cy = Math.floor(p.y / CELL), cz = Math.floor(p.z / CELL);
-    for (let x = -c; x <= c; x++) for (let y = -c; y <= c; y++) for (let z = -c; z <= c; z++) {
-      const a = grid.get((((cx + x) + 512) * 1024 + ((cy + y) + 512)) * 1024 + ((cz + z) + 512)); if (!a) continue;
-      for (const i of a) { const d = items[i].pos.distanceTo(p); if (d < range) out.push([items[i], d]); }
-    }
+    const out = []; const t = now();
+    for (const it of items) { if (it.G.id !== 0 && p.distanceTo(it.G.center) > it.G.radius * 1.15 + range) continue; update(it, t); const d = it.pos.distanceTo(p); if (d < range) out.push([it, d]); }
     return out;
   }
 
@@ -67,5 +64,5 @@ export function buildPlanets(scene, layout, imagery) {
     }
   }
 
-  return { items, bySlug, pool, group, near, assign, active: () => pool.filter(m => m.visible) };
+  return { items, bySlug, pool, group, near, assign, update, active: () => pool.filter(m => m.visible) };
 }
