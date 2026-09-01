@@ -7,7 +7,7 @@
 //   node pipeline/build-imagery.mjs                 # default batch
 //   BATCH=40000 RATE=6 node pipeline/build-imagery.mjs
 //
-// Output: public/data/imagery/<shard>.json  ->  { "<workspace/project>": { c:"owner/imageId", s:["owner/imageId",...], t:"2026-08" } }
+// Output: public/data/imagery/<shard>.json  ->  { "<workspace/project>": { c:"owner/imageId", s:["owner/imageId",...], t:"2026-08", n:imageCount } }
 // build-index.mjs then derives public/data/imagery.json (slug, galaxy, index, cover) from these shards.
 
 import fs from "node:fs/promises";
@@ -53,7 +53,8 @@ async function main() {
         const cover = html.match(/property="og:image"\s+content="https:\/\/source\.roboflow\.com\/([^/"]+\/[^/"]+)\//)?.[1];
         const samples = [...html.matchAll(/source\.roboflow\.com\/([A-Za-z0-9]+\/[A-Za-z0-9]+)\/thumb\.jpg/g)].map(m => m[1]);
         const uniq = [...new Set(samples)].filter(k => k !== cover).slice(0, 8);
-        shards[shardOf(slug)][slug] = cover ? { c: cover, s: uniq, t: stamp } : { t: stamp };
+        const n = +((html.match(/for\s+([\d,]+)\s+images/) || [])[1] || "").replace(/,/g, "") || 0;   // "… annotations for 1,120 images"
+        shards[shardOf(slug)][slug] = cover ? { c: cover, s: uniq, t: stamp, ...(n ? { n } : {}) } : { t: stamp };
         if (cover) ok++;
       } catch (e) { /* leave for next run */ }
       done++;
