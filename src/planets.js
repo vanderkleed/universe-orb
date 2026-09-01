@@ -21,11 +21,14 @@ function texture(url, cb) {
 export function buildPlanets(scene, layout, imagery) {
   // imagery: [ [slug, galaxy, index, coverKey], ... ]
   // Each item's pos is refreshed from the orbit model (galaxies rotate), so positions are never cached for long.
+  // size follows the dataset's image count (log scale, ~150 images small, 50k+ images large);
+  // datasets whose count is not yet indexed fall back to a hash-derived size
+  const sizeOf = (n, sz) => n > 0 ? 0.5 + 1.15 * Math.min(1, Math.max(0, (Math.log10(n) - 1.7) / 2.8)) : 0.55 + sz * 0.45;
   const items = []; const v = new THREE.Vector3();
-  for (const [slug, dom, j, cover] of imagery) {
+  for (const [slug, dom, j, cover, n] of imagery) {
     const G = layout.galaxies[dom]; if (!G) continue;
     const sz = starAt(G, j, v);
-    items.push({ slug, dom, j, G, cover, pos: v.clone(), size: 0.55 + sz * 0.55, mesh: null });
+    items.push({ slug, dom, j, G, cover, n: n || 0, pos: v.clone(), size: sizeOf(n, sz), mesh: null });
   }
   const bySlug = new Map(items.map(it => [it.slug, it]));
   const update = (it, t = now()) => starNow(it.G, it.j, t, it.pos);
