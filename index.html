@@ -26,6 +26,7 @@
         <div class="results" id="results" role="listbox"></div>
       </div>
       <button class="btn" id="snd" aria-pressed="false">Sound off <kbd>V</kbd></button>
+      <button class="btn" id="help" aria-label="How this works">?</button>
       <button class="btn" id="rnd">Random jump <kbd>R</kbd></button>
     </div>
   </nav>
@@ -69,6 +70,26 @@
   </aside>
 
   <div class="intro" id="intro"><div><h1>Universe</h1><p id="intro-p">Charting</p></div></div>
+
+  <div class="hint" id="hint" aria-live="polite"></div>
+
+  <div class="guide" id="guide" hidden>
+    <div class="card" role="dialog" aria-label="How this works">
+      <h2>You are the orb</h2>
+      <p>Every point of light is a real public dataset on Roboflow Universe — all 330,000 of them, gathered
+      into galaxies by subject. The circled worlds carry the datasets' own images; the bigger the world,
+      the more images inside.</p>
+      <div class="keysg">
+        <div><kbd>wasd</kbd> fly · hold <kbd>shift</kbd> for turbo</div>
+        <div><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
+        <div><kbd>R</kbd> random jump · <kbd>/</kbd> search · <kbd>esc</kbd> release</div>
+      </div>
+      <div class="row">
+        <button class="go-btn" id="g-jump">Jump somewhere random</button>
+        <button class="quiet" id="g-close">Just explore</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>
