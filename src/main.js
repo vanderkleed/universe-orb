@@ -139,6 +139,27 @@ async function boot() {
   }
   $("rnd").addEventListener("click", randomJump);
 
+  /* ---------- guide + one-time hints ---------- */
+  const SEEN = "universe-orb:seen";
+  const seen = (() => { try { return new Set(JSON.parse(localStorage.getItem(SEEN) || "[]")); } catch { return new Set(); } })();
+  const mark = k => { seen.add(k); try { localStorage.setItem(SEEN, JSON.stringify([...seen])); } catch {} };
+  let hintT = null;
+  function hintOnce(key, html, ms = 6500) {
+    if (seen.has(key) || !$("guide").hidden) return; mark(key);
+    const el = $("hint"); el.innerHTML = html; el.classList.add("show");
+    clearTimeout(hintT); hintT = setTimeout(() => el.classList.remove("show"), ms);
+  }
+  function openGuide() { $("guide").hidden = false; }
+  function closeGuide() { $("guide").hidden = true; mark("guide"); }
+  $("help").addEventListener("click", openGuide);
+  $("g-close").addEventListener("click", closeGuide);
+  $("g-jump").addEventListener("click", () => { closeGuide(); randomJump(); });
+  // first visit: the guide comes up once the arrival flight has begun
+  if (!seen.has("guide")) setTimeout(openGuide, 3200);
+  // gentle nudges, each shown once, spaced out
+  let arrivals = 0, searched = false;
+  setTimeout(() => { if (!searched) hintOnce("h-search", `<kbd>/</kbd> search all ${fmt(manifest.total)} datasets`); }, 75000);
+
   /* ---------- input ---------- */
   let dragging = false, lx = 0, ly = 0, moved = 0, mx = innerWidth / 2, my = innerHeight / 2; const mouse = new THREE.Vector2(0, 0);
   canvas.addEventListener("pointerdown", e => { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId); });
@@ -157,7 +178,7 @@ async function boot() {
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
-    if (e.key === "Escape") release(true); if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
+    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
   addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
@@ -242,7 +263,7 @@ async function boot() {
   }
   function pick(i) { const h = hits[i]; if (!h) return; resEl.classList.remove("open"); qEl.blur(); enterAt(h.galaxy, h.index); }
   qEl.addEventListener("input", () => { searchQuery = qEl.value; if (!searchQuery.trim()) { renderResults({ q: "", hits: [], total: 0 }); return; } resEl.innerHTML = `<div class="meta">${search.ready ? "Searching" : "Loading the catalog"}…</div>`; resEl.classList.add("open"); search.query(searchQuery, renderResults); });
-  qEl.addEventListener("focus", () => { search.load(); if (hits.length) resEl.classList.add("open"); });
+  qEl.addEventListener("focus", () => { searched = true; search.load(); if (hits.length) resEl.classList.add("open"); });
   qEl.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!hits.length) return; sel = (sel + (e.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length; resEl.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === sel)); }
     else if (e.key === "Enter") { e.preventDefault(); pick(sel); } else if (e.key === "Escape") { qEl.value = ""; searchQuery = ""; renderResults({ q: "", hits: [], total: 0 }); qEl.blur(); } e.stopPropagation(); });
   document.addEventListener("pointerdown", e => { if (!$("search").contains(e.target)) resEl.classList.remove("open"); });
@@ -262,7 +283,9 @@ async function boot() {
     if (auto && !warpPhase) {
       tmp.copy(auto.target).sub(ship.position); const dist = tmp.length(); const h = headingTo(tmp); tYaw = yaw + wrap(h.yaw - yaw); tPitch = h.pitch;
       const remain = dist - auto.standoff; thrust = remain > 0.4 ? Math.min(40, Math.sqrt(Math.max(0, remain) * 16) + 0.4) : 0;
-      if (remain <= 0.4) { auto = null; thrust = 0; if (focus && innerWidth > 720) tYaw = yaw - 0.22; audio.play.arrive(); }
+      if (remain <= 0.4) { auto = null; thrust = 0; if (focus && innerWidth > 720) tYaw = yaw - 0.22; audio.play.arrive();
+        arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
+        if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
     const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d;
     if ((fwdIn || turn) && auto) { auto = null; pendingWarp = null; }
