@@ -18,7 +18,7 @@ const OUT = path.join(ROOT, "public/data");
 const BATCH = +(process.env.BATCH || 15000);
 const RATE = +(process.env.RATE || 4);           // requests per second
 const SHARDS = 64;
-const UA = "universe-orb-indexer (+https://github.com/roboflow)";
+const UA = process.env.UA || "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 universe-orb-indexer";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const shardOf = slug => { let h = 0; for (const ch of slug) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % SHARDS; };
 
@@ -41,14 +41,15 @@ async function main() {
   const queue = [...todo, ...stale];
   console.log(`visiting ${queue.length} project pages (${todo.length} new) at ${RATE}/s`);
 
-  let done = 0, ok = 0; const stamp = new Date().toISOString().slice(0, 7);
+  let done = 0, ok = 0, httpFail = 0, firstFail = null; const stamp = new Date().toISOString().slice(0, 7);
   const workers = Array.from({ length: RATE }, async () => {
     while (queue.length) {
       const [slug] = queue.shift();
       const t0 = Date.now();
       try {
-        const r = await fetch(`https://universe.roboflow.com/${slug}`, { headers: { "user-agent": UA } });
+        const r = await fetch(`https://universe.roboflow.com/${slug}`, { headers: { "user-agent": UA, "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "accept-language": "en-US,en;q=0.9" } });
         if (r.status === 429) { await sleep(5000); queue.push([slug]); continue; }
+        if (!r.ok) { httpFail++; if (!firstFail) firstFail = r.status + " " + slug; }
         const html = r.ok ? await r.text() : "";
         const cover = html.match(/property="og:image"\s+content="https:\/\/source\.roboflow\.com\/([^/"]+\/[^/"]+)\//)?.[1];
         const samples = [...html.matchAll(/source\.roboflow\.com\/([A-Za-z0-9]+\/[A-Za-z0-9]+)\/thumb\.jpg/g)].map(m => m[1]);
@@ -67,5 +68,7 @@ async function main() {
   let covers = 0;
   for (let i = 0; i < SHARDS; i++) { await fs.writeFile(path.join(OUT, `imagery/${i}.json`), JSON.stringify(shards[i])); for (const v of Object.values(shards[i])) if (v.c) covers++; }
   console.log(`imagery shards written: ${covers} datasets with a cover. Run build-index.mjs --from raw to refresh imagery.json + manifest.`);
+  if (httpFail) console.warn(`${httpFail} pages returned HTTP errors (first: ${firstFail})`);
+  if (done > 100 && ok === 0 && httpFail > done * 0.9) { console.error("the project-page host appears to be refusing this runner entirely"); process.exit(1); }
 }
 main().catch(e => { console.error(e); process.exit(1); });
