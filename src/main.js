@@ -12,7 +12,7 @@ import { thumbUrl, imageryFor } from "./data.js";
 const $ = id => document.getElementById(id);
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const audio = createAudio();
-{ const b = $("snd"); const label = on => { b.innerHTML = `Sound ${on ? "on" : "off"} <kbd>S</kbd>`; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
+{ const b = $("snd"); const label = on => { b.innerHTML = `Sound ${on ? "on" : "off"} <kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
 
 async function boot() {
   const manifest = await loadManifest();
@@ -149,10 +149,17 @@ async function boot() {
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
+  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, hold Shift for turbo
+  const keys = { w: 0, s: 0, a: 0, d: 0, boost: 0 };
+  const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", arrowleft: "a", d: "d", arrowright: "d" };
   addEventListener("keydown", e => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    if (e.key === "Shift") keys.boost = 1;
+    const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
-    if (e.key === "Escape") release(true); if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "s" || e.key === "S") audio.toggle(); });
+    if (e.key === "Escape") release(true); if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
+  addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
+  addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
 
   const ray = new THREE.Raycaster();
@@ -257,10 +264,14 @@ async function boot() {
       const remain = dist - auto.standoff; thrust = remain > 0.4 ? Math.min(40, Math.sqrt(Math.max(0, remain) * 16) + 0.4) : 0;
       if (remain <= 0.4) { auto = null; thrust = 0; if (focus && innerWidth > 720) tYaw = yaw - 0.22; audio.play.arrive(); }
     }
+    const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d;
+    if ((fwdIn || turn) && auto) { auto = null; pendingWarp = null; }
+    if (turn) tYaw += turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9);
+    const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
     const py = yaw; yaw += wrap(tYaw - yaw) * Math.min(1, dt * 4.5); pitch += (tPitch - pitch) * Math.min(1, dt * 4.5); yawVel = (yaw - py) / Math.max(dt, 1e-3);
     ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
     camRig.rotation.z += ((-yawVel * 0.1) - camRig.rotation.z) * Math.min(1, dt * 3);
-    const target = focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
+    const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
     fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
@@ -295,6 +306,6 @@ async function boot() {
     for (const k of [...domains, "Uncharted"]) { const lists = await galaxyShards(manifest, k); let j = 0; for (const list of lists) { for (const e of list) { if (e[0] === slug) return stars.start[k] + j; j++; } } }
     return -1;
   }
-  window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, search, audio, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
+  window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, search, audio, keys, get speed() { return speed; }, get yaw() { return yaw; }, get pitch() { return pitch; }, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
 }
 boot().catch(e => { console.error(e); $("intro-p").textContent = "Could not load the index. " + e.message; });
