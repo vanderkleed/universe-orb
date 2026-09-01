@@ -1,7 +1,8 @@
 // Universe Orb: you are a mirrored orb flying through every public dataset on Roboflow Universe.
 import * as THREE from "three";
 import { loadManifest, loadImagery, nameOf, galaxyShards, prettyName, monthName, fmt, esc } from "./data.js";
-import { buildLayout, buildStars, starAt, WORLD, FOG } from "./universe.js";
+import { buildLayout, buildStars, starNow, now, WORLD, FOG } from "./universe.js";
+import { createSearch } from "./search.js";
 import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING, SHADE, dither } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
@@ -109,7 +110,7 @@ async function boot() {
     const nm = nameOf(manifest, galaxy, j);           // may be null until the shard arrives
     const pos = stars.positionOf(index, new THREE.Vector3());
     const slug = nm ? nm[0] : null; const item = slug ? planets.bySlug.get(slug) : null;
-    return { index, slug, galaxy, j, lastmod: nm ? nm[1] : null, cover: item ? item.cover : null, item, pos };
+    return { index, slug, galaxy, G: galaxies[galaxy], j, lastmod: nm ? nm[1] : null, cover: item ? item.cover : null, item, pos };
   }
   async function enterStar(index) {
     release();
@@ -123,7 +124,8 @@ async function boot() {
     openDrawer(star); showConstellation(star); tag.hide();
     history.replaceState(null, "", "#" + star.slug);
   }
-  function enterPlanet(item) { const G = galaxies[item.dom]; const idx = stars.start[item.dom] + item.j; enterStar(idx); }
+  function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
+  function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
   function goDomain(k) { release(); activeDom = k; markDom(k); const G = galaxies[k]; flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); history.replaceState(null, "", "#galaxy/" + k.toLowerCase()); }
   function randomJump() {
     const pickPlanet = Math.random() < 0.7 && planets.items.length;
@@ -144,7 +146,10 @@ async function boot() {
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
-  addEventListener("keydown", e => { if (e.key === "Escape") release(true); if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; });
+  addEventListener("keydown", e => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
+    if (e.key === "Escape") release(true); if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
 
   const ray = new THREE.Raycaster();
@@ -176,12 +181,12 @@ async function boot() {
       const sx = (v3.x * 0.5 + 0.5) * innerWidth, sy = (-v3.y * 0.5 + 0.5) * innerHeight; cand.push({ i, dist, sx, sy, sc: Math.hypot(sx - cx, sy - cy) + dist * 6 });
     }
     cand.sort((a, b) => a.sc - b.sc);
-    const placed = [], picked = [];
-    for (const c of cand) { if (picked.length >= slabels.length) break; if (placed.some(p => Math.abs(p.sy - c.sy) < 14 && Math.abs(p.sx - c.sx) < 170)) continue; const nm = nameOf(manifest, stars.galaxyOf(c.i), stars.local[c.i]); if (!nm) continue; c.nm = nm; placed.push(c); picked.push(c); }
+    const placed = [], picked = []; const q = searchQuery.trim().toLowerCase();
+    for (const c of cand) { if (picked.length >= slabels.length) break; if (placed.some(p => Math.abs(p.sy - c.sy) < 14 && Math.abs(p.sx - c.sx) < 170)) continue; const nm = nameOf(manifest, stars.galaxyOf(c.i), stars.local[c.i]); if (!nm) continue; c.nm = nm; c.hit = q && prettyName(nm[0]).toLowerCase().includes(q); if (q && !c.hit) continue; placed.push(c); picked.push(c); }
     let hs = -1, hd = 18, hsc = null;
     for (let k = 0; k < slabels.length; k++) {
       const el = slabels[k]; const c = picked[k]; if (!c || tCamDist > 40) { el.style.opacity = 0; continue; }
-      el.textContent = prettyName(c.nm[0]); el.style.transform = `translate(${c.sx}px,${c.sy}px) translate(8px,-50%)`; el.style.opacity = Math.max(0.18, 1 - c.dist / 42) * (focus && focus.index === c.i ? 1 : 0.75);
+      el.textContent = prettyName(c.nm[0]); el.classList.toggle("hit", !!c.hit); el.style.transform = `translate(${c.sx}px,${c.sy}px) translate(8px,-50%)`; el.style.opacity = c.hit ? 1 : Math.max(0.18, 1 - c.dist / 42) * (focus && focus.index === c.i ? 1 : 0.75);
       const d2 = Math.hypot(c.sx - mx, c.sy - my); if (d2 < hd) { hd = d2; hs = c.i; hsc = c; }
     }
     if (hs !== hotStar) { hotStar = hs; if (hs >= 0 && (!focus || focus.index !== hs)) tag.show(`${esc(prettyName(hsc.nm[0]))}<small>${esc(stars.galaxyOf(hs))} · updated ${monthName(hsc.nm[1])}</small>`, mx, my); else if (!hot) tag.hide(); }
@@ -212,10 +217,37 @@ async function boot() {
   }
   buildRail(manifest, layout, goDomain);
 
+  /* ---------- search ---------- */
+  let searchQuery = "";
+  const qEl = $("q"), resEl = $("results"); let hits = [], sel = -1;
+  const search = createSearch(manifest, layout, planets.bySlug.keys());
+  function renderResults(r) {
+    hits = r.hits; sel = hits.length ? 0 : -1;
+    if (!r.q.trim()) { resEl.classList.remove("open"); resEl.innerHTML = ""; return; }
+    resEl.innerHTML = `<div class="meta">${fmt(r.total)} match${r.total === 1 ? "" : "es"}${r.total > 12 ? " · top 12" : ""}</div>` +
+      hits.map((h, i) => { const it = planets.bySlug.get(h.slug); return `<button role="option" data-i="${i}" class="${i === sel ? "on" : ""}"><span class="pl ${it ? "" : "empty"}">${it ? `<img src="${thumbUrl(it.cover)}" alt="" loading="lazy">` : ""}</span><span><div class="nm">${esc(prettyName(h.slug))}</div><div class="ws">${esc(h.slug.split("/")[0])}</div></span><span class="gx">${h.galaxy === "Uncharted" ? "Interstellar" : esc(h.galaxy)}</span></button>`; }).join("") +
+      (hits.length ? "" : `<div class="meta">Nothing in the catalog by that name</div>`);
+    resEl.classList.add("open");
+    resEl.querySelectorAll("button").forEach(b => b.addEventListener("click", () => pick(+b.dataset.i)));
+  }
+  function pick(i) { const h = hits[i]; if (!h) return; resEl.classList.remove("open"); qEl.blur(); enterAt(h.galaxy, h.index); }
+  qEl.addEventListener("input", () => { searchQuery = qEl.value; if (!searchQuery.trim()) { renderResults({ q: "", hits: [], total: 0 }); return; } resEl.innerHTML = `<div class="meta">${search.ready ? "Searching" : "Loading the catalog"}…</div>`; resEl.classList.add("open"); search.query(searchQuery, renderResults); });
+  qEl.addEventListener("focus", () => { search.load(); if (hits.length) resEl.classList.add("open"); });
+  qEl.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!hits.length) return; sel = (sel + (e.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length; resEl.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === sel)); }
+    else if (e.key === "Enter") { e.preventDefault(); pick(sel); } else if (e.key === "Escape") { qEl.value = ""; searchQuery = ""; renderResults({ q: "", hits: [], total: 0 }); qEl.blur(); } e.stopPropagation(); });
+  document.addEventListener("pointerdown", e => { if (!$("search").contains(e.target)) resEl.classList.remove("open"); });
+
   /* ---------- loop ---------- */
   const clock = new THREE.Clock(); let t = 0, frame = 0; const qBill = new THREE.Quaternion();
+  const prevStar = new THREE.Vector3();
   function loop() {
     requestAnimationFrame(loop); const dt = Math.min(clock.getDelta(), 0.05); t += dt; frame++;
+    const T = now(); stars.tick(T);
+    // the focused star is orbiting: keep the autopilot target, reticle and constellation on it,
+    // and once holding, let the orbit carry the ship along with it
+    if (focus) { prevStar.copy(focus.pos); starNow(focus.G, focus.j, T, focus.pos);
+      if (auto) auto.target.copy(focus.pos); else ship.position.add(tmp.copy(focus.pos).sub(prevStar));
+      reticle.position.copy(focus.pos); constel.position.copy(focus.pos); }
     updateWarp(dt);
     if (auto && !warpPhase) {
       tmp.copy(auto.target).sub(ship.position); const dist = tmp.length(); const h = headingTo(tmp); tYaw = yaw + wrap(h.yaw - yaw); tPitch = h.pitch;
@@ -232,7 +264,7 @@ async function boot() {
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
-    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
+    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
       const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
     if (constel.children.length) { constelT += dt; constel.children.forEach((c, i) => { c.quaternion.copy(qBill); const k = Math.min(1, Math.max(0, (constelT - i * 0.07) * 2.2)); const e = 1 - Math.pow(1 - k, 3); c.scale.setScalar(c.userData.base * e + 0.001); }); }
@@ -260,6 +292,6 @@ async function boot() {
     for (const k of [...domains, "Uncharted"]) { const lists = await galaxyShards(manifest, k); let j = 0; for (const list of lists) { for (const e of list) { if (e[0] === slug) return stars.start[k] + j; j++; } } }
     return -1;
   }
-  window.__u = { ship, camera, stars, planets, galaxies, enterStar, goDomain, randomJump, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
+  window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, search, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
 }
 boot().catch(e => { console.error(e); $("intro-p").textContent = "Could not load the index. " + e.message; });
