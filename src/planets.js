@@ -21,9 +21,9 @@ function texture(url, cb) {
 export function buildPlanets(scene, layout, imagery) {
   // imagery: [ [slug, galaxy, index, coverKey], ... ]
   // Each item's pos is refreshed from the orbit model (galaxies rotate), so positions are never cached for long.
-  // size follows the dataset's image count (log scale, ~150 images small, 50k+ images large);
+  // size follows the dataset's image count (log scale, ~150 images tiny, 50k+ images planetary);
   // datasets whose count is not yet indexed fall back to a hash-derived size
-  const sizeOf = (n, sz) => n > 0 ? 0.5 + 1.15 * Math.min(1, Math.max(0, (Math.log10(n) - 1.7) / 2.8)) : 0.55 + sz * 0.45;
+  const sizeOf = (n, sz) => n > 0 ? 0.38 + 1.8 * Math.min(1, Math.max(0, (Math.log10(n) - 2.05) / 2.65)) : 0.5 + sz * 0.35;
   const items = []; const v = new THREE.Vector3();
   for (const [slug, dom, j, cover, n] of imagery) {
     const G = layout.galaxies[dom]; if (!G) continue;
