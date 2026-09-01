@@ -1,4 +1,4 @@
-// Layout of the universe: 18 spiral galaxies plus an interstellar field, one star per public dataset.
+// Layout of the universe: 18 galaxies (spirals, barred spirals, ellipticals, rings, flocculent disks) plus an interstellar field, one star per public dataset.
 // Rest positions are deterministic functions of (galaxy, index) so any dataset can be located without
 // generating the whole field in order. Galaxies rotate differentially (inner stars orbit faster than
 // outer ones, which is what winds the arms); the interstellar field drifts as a whole. The same orbit
@@ -8,15 +8,19 @@ import { DOT } from "./textures.js";
 
 export const WORLD = 260;
 export const FOG = 0.0022;
-// rotation: angular speed ω(r) = ROT_W / (r + ROT_R0)  → inner orbit ≈ 20 min, outer ≈ 1.7 h
-export const ROT_W = 0.047, ROT_R0 = 6, DRIFT = 0.0004;   // DRIFT: interstellar field, rad/s about world Y
-const T0 = 12345;                                          // time offset so nothing starts at angle 0
+// rotation: angular speed ω(r) = W / (r + R0), per galaxy (W, R0 vary; ellipticals barely turn).
+// Inside rSolid the disk turns as a solid body (bars keep their shape). Arms always trail the spin.
+// Kept slight: about a radian per 10–40 minutes. DRIFT: interstellar field, rad/s about world Y.
+export const ROT_W = 0.024, ROT_R0 = 12, DRIFT = 0.0004;
+const T0 = 300;                                            // small offset so nothing starts exactly at rest
 const t0ms = performance.now();
 export const now = () => T0 + (performance.now() - t0ms) / 1000;
 
 function h32(a, b, c) { let h = (a * 374761393 + b * 668265263 + c * 2246822519) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
 function gauss(a, b, c) { const u = Math.max(1e-6, h32(a, b, c)), v = h32(a, b, c + 7); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2831853 * v); }
 
+// a fixed mix so the 18 galaxies spread across types: 8 spirals, 3 barred, 3 ellipticals, 2 rings, 2 flocculent
+const TYPES = ["spiral", "barred", "elliptical", "spiral", "ring", "flocculent", "spiral", "barred", "spiral", "elliptical", "spiral", "ring", "barred", "spiral", "flocculent", "spiral", "elliptical", "spiral"];
 export function buildLayout(manifest) {
   const domains = Object.keys(manifest.galaxies).filter(k => k !== "Uncharted");
   const galaxies = {};
@@ -27,9 +31,21 @@ export function buildLayout(manifest) {
     const N = manifest.galaxies[k].n;
     const radius = 7 * Math.sqrt(N / 1000) + 9;
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler((h32(i, 2, 1) - 0.5) * 1.1, h32(i, 3, 1) * 6.28, (h32(i, 4, 1) - 0.5) * 1.1));
-    galaxies[k] = { id: i + 1, name: k, center, radius, N, q, qInv: q.clone().invert(), arms: 2 + Math.floor(h32(i, 5, 1) * 2), twist: 3.5 + h32(i, 6, 1) * 3, spin: h32(i, 7, 1) < 0.5 ? 1 : -1 };
+    // morphology: each galaxy gets its own type and shape parameters so no two look alike
+    const type = TYPES[i % TYPES.length];
+    const chir = h32(i, 7, 1) < 0.5 ? 1 : -1;   // handedness of the arms; the spin is set so they trail
+    const G = { id: i + 1, name: k, type, center, radius, N, q, qInv: q.clone().invert(), chir, spin: -chir,
+      arms: type === "flocculent" ? 4 + Math.floor(h32(i, 5, 1) * 3) : type === "barred" ? 2 : 2 + Math.floor(h32(i, 5, 1) * 3),   // 2–4
+      twist: type === "flocculent" ? 1.5 + h32(i, 6, 1) * 1.5 : 2.4 + h32(i, 6, 1) * 4.2,                                        // arm pitch
+      armW: type === "flocculent" ? 0.3 : 0.1 + h32(i, 9, 1) * 0.2,                                                              // arm scatter (rad)
+      bulge: 0.07 + h32(i, 10, 1) * 0.2, thick: 0.03 + h32(i, 11, 1) * 0.05,
+      bar: 0.3 + h32(i, 12, 1) * 0.22, ringR: 0.58 + h32(i, 13, 1) * 0.2, ringW: 0.02 + h32(i, 14, 1) * 0.025,
+      e1: 0.55 + h32(i, 15, 1) * 0.4, e2: 0.35 + h32(i, 16, 1) * 0.45,                                                          // elliptical axis ratios
+      rotW: ROT_W * (type === "elliptical" ? 0.25 : 0.7 + h32(i, 17, 1) * 0.6), rotR0: type === "elliptical" ? 24 : ROT_R0 * (0.7 + h32(i, 18, 1) * 0.8) };
+    G.rSolid = type === "barred" ? G.bar * radius : radius * 0.15;
+    galaxies[k] = G;
   });
-  galaxies.Uncharted = { id: 0, name: "Uncharted", N: manifest.galaxies.Uncharted?.n || 0, center: new THREE.Vector3(), radius: WORLD * 1.5 };
+  galaxies.Uncharted = { id: 0, name: "Uncharted", type: "field", N: manifest.galaxies.Uncharted?.n || 0, center: new THREE.Vector3(), radius: WORLD * 1.5, rotW: 0, rotR0: 1, rSolid: 0 };
   return { domains, galaxies };
 }
 
@@ -40,18 +56,50 @@ function localAt(G, j, out) {
     out.set(Math.cos(th) * rr, yy, Math.sin(th) * rr);
     return 0.55 + h32(0, j, 4) * 0.6;
   }
-  const R = G.radius, id = G.id;
-  const bulge = h32(id, j, 1) < 0.14;
-  let rr, th, yy;
-  if (bulge) { rr = Math.abs(gauss(id, j, 2)) * R * 0.18; th = h32(id, j, 3) * 6.283; yy = gauss(id, j, 4) * R * 0.08; }
-  else { rr = R * Math.sqrt(0.04 + h32(id, j, 5) * 0.96); const arm = Math.floor(h32(id, j, 6) * G.arms); th = G.twist * rr / R + arm * 6.283 / G.arms + gauss(id, j, 7) * 0.32; yy = gauss(id, j, 8) * R * 0.045 * (1.2 - rr / R); }
+  const R = G.radius, id = G.id, t = G.type;
+  const u = h32(id, j, 1);
+  let rr, th, yy, big = false;
+  if (t === "elliptical") {
+    // a 3-axis gaussian blob, denser at the core, no arms
+    const k = R * 0.36 * Math.pow(h32(id, j, 10), 0.4);   // concentrated core, soft edge
+    const x = gauss(id, j, 2) * k, z = gauss(id, j, 3) * k * G.e1; yy = gauss(id, j, 4) * k * G.e2;
+    out.set(x, yy, z); big = Math.hypot(x, yy, z) < R * 0.1;
+    return (big ? 1.1 : 0.8) + h32(id, j, 9) * 0.7;
+  }
+  if (u < G.bulge) { rr = Math.abs(gauss(id, j, 2)) * R * 0.16; th = h32(id, j, 3) * 6.283; yy = gauss(id, j, 4) * R * 0.07; big = true; }
+  else if (t === "ring") {
+    if (u < G.bulge + 0.1) { rr = R * Math.sqrt(h32(id, j, 5)) * G.ringR * 0.92; th = h32(id, j, 3) * 6.283; }                     // sparse interior
+    else if (u < G.bulge + 0.16) { rr = R * (G.ringR + 0.08 + h32(id, j, 5) * 0.3); th = h32(id, j, 3) * 6.283; }                    // faint outskirts
+    else { rr = R * (G.ringR + gauss(id, j, 5) * G.ringW); th = h32(id, j, 3) * 6.283; }                                             // the ring
+    yy = gauss(id, j, 8) * R * G.thick;
+  }
+  else if (t === "barred" && u < G.bulge + 0.16) {
+    // the bar: a thick line through the core along local x
+    const a = (h32(id, j, 5) - 0.5) * 2 * G.bar * R; const w = gauss(id, j, 6) * R * 0.035 * (1 - Math.abs(a) / (G.bar * R) * 0.5);
+    out.set(a, gauss(id, j, 8) * R * G.thick * 0.8, w); return 0.95 + h32(id, j, 9) * 0.6;
+  }
+  else if (t === "flocculent" && h32(id, j, 13) < 0.5) {
+    // patchy star-forming clumps scattered over the disk
+    const c = Math.floor(h32(id, j, 14) * 40); const rc = R * Math.sqrt(0.08 + h32(id, c + 1000, 20) * 0.85), tc = h32(id, c + 1000, 21) * 6.283;
+    out.set(Math.cos(tc) * rc + gauss(id, j, 2) * R * 0.04, gauss(id, j, 8) * R * G.thick * 0.8, Math.sin(tc) * rc + gauss(id, j, 3) * R * 0.04);
+    return 0.85 + h32(id, j, 9) * 0.7;
+  }
+  else {
+    // spiral arms (barred: arms start at the bar ends; flocculent: many short loose arms + scatter)
+    const inner = t === "barred" ? G.bar : 0.04;
+    rr = R * Math.sqrt(inner * inner + h32(id, j, 5) * (1 - inner * inner));
+    const arm = Math.floor(h32(id, j, 6) * G.arms);
+    const scatter = t === "flocculent" && h32(id, j, 12) < 0.35;
+    th = G.chir * G.twist * (rr - inner * R) / R + arm * 6.283 / G.arms + gauss(id, j, 7) * (scatter ? 3 : G.armW);
+    yy = gauss(id, j, 8) * R * G.thick * (1.2 - rr / R);
+  }
   out.set(Math.cos(th) * rr, yy, Math.sin(th) * rr);
-  return (bulge ? 1.1 : 0.8) + h32(id, j, 9) * 0.7;
+  return (big ? 1.1 : 0.8) + h32(id, j, 9) * 0.7;
 }
 // apply the orbit: rotate a galaxy-local point about its axis by θ(r, t), then place in the world
 function orbit(G, local, t, out) {
   const r = Math.hypot(local.x, local.z);
-  const th = G.id === 0 ? DRIFT * t : G.spin * ROT_W * t / (r + ROT_R0);
+  const th = G.id === 0 ? DRIFT * t : G.spin * G.rotW * t / (Math.max(r, G.rSolid) + G.rotR0);
   const c = Math.cos(th), s = Math.sin(th);
   out.set(local.x * c - local.z * s, local.y, local.x * s + local.z * c);
   if (G.id !== 0) out.applyQuaternion(G.q).add(G.center);
@@ -78,8 +126,8 @@ export function buildStars(layout, manifest) {
   const NG = layout.domains.length + 1;
   const uCenter = [], uQuat = [];
   for (let i = 0; i < NG; i++) { uCenter.push(new THREE.Vector3()); uQuat.push(new THREE.Vector4(0, 0, 0, 1)); }
-  const uSpin = new Float32Array(NG).fill(1);
-  for (const k of layout.domains) { const G = layout.galaxies[k]; uCenter[G.id].copy(G.center); uQuat[G.id].set(G.q.x, G.q.y, G.q.z, G.q.w); uSpin[G.id] = G.spin; }
+  const uRot = []; for (let i = 0; i < NG; i++) uRot.push(new THREE.Vector3(0, 1, 0));   // (spin·W, R0, rSolid) per galaxy
+  for (const k of layout.domains) { const G = layout.galaxies[k]; uCenter[G.id].copy(G.center); uQuat[G.id].set(G.q.x, G.q.y, G.q.z, G.q.w); uRot[G.id].set(G.spin * G.rotW, G.rotR0, G.rSolid); }
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));   // galaxy-local rest positions
@@ -87,15 +135,15 @@ export function buildStars(layout, manifest) {
   geo.setAttribute("gal", new THREE.BufferAttribute(gal, 1));
   const mat = new THREE.ShaderMaterial({
     uniforms: { tex: { value: DOT }, fogD: { value: FOG }, pr: { value: Math.min(devicePixelRatio, 2) }, warpK: { value: 0 }, time: { value: 0 },
-      rotW: { value: ROT_W }, rotR0: { value: ROT_R0 }, drift: { value: DRIFT }, gCenter: { value: uCenter }, gQuat: { value: uQuat }, gSpin: { value: uSpin } },
+      drift: { value: DRIFT }, gCenter: { value: uCenter }, gQuat: { value: uQuat }, gRot: { value: uRot } },
     defines: { NG },
     vertexShader: `attribute float sz; attribute float gal; varying float vA;
-      uniform float fogD, pr, warpK, time, rotW, rotR0, drift; uniform vec3 gCenter[NG]; uniform vec4 gQuat[NG]; uniform float gSpin[NG];
+      uniform float fogD, pr, warpK, time, drift; uniform vec3 gCenter[NG]; uniform vec4 gQuat[NG]; uniform vec3 gRot[NG];
       vec3 qrot(vec4 q, vec3 v){ return v + 2.0*cross(q.xyz, cross(q.xyz, v) + q.w*v); }
       void main(){
         int g = int(gal + 0.5); vec3 p = position;
         float r = length(p.xz); vec4 q = gQuat[g];
-        float th = (g == 0) ? drift*time : gSpin[g]*rotW*time/(r + rotR0);
+        vec3 rot = gRot[g]; float th = (g == 0) ? drift*time : rot.x*time/(max(r, rot.z) + rot.y);
         float c = cos(th), s = sin(th);
         vec3 rp = vec3(p.x*c - p.z*s, p.y, p.x*s + p.z*c);
         vec3 wp = (g == 0) ? rp : qrot(q, rp) + gCenter[g];
