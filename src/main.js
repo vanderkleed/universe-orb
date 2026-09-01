@@ -72,7 +72,7 @@ async function boot() {
     else if (dist > JUMP) { if (!warpPhase) hyperspace(P, standoff); else pendingWarp = { P: P.clone(), standoff }; }
   }
   function jumpNear(P, standoff) { tmp.copy(P).sub(ship.position).normalize(); ship.position.copy(P).sub(tmp.multiplyScalar(standoff + 14)); const h = headingTo(tmp2.copy(P).sub(ship.position)); yaw = tYaw = h.yaw; pitch = tPitch = h.pitch; }
-  function hyperspace(P, standoff) { audio.play.warpStart(); const start = ship.position.clone(); const dir = P.clone().sub(start); const dist = dir.length(); dir.normalize(); const D = Math.max(0, dist - (standoff + 12)); warpRun = { start, dir, D, T: Math.min(3.6, 1.4 + D / 380), P: P.clone() }; warpPhase = "fly"; warpT = 0; }
+  function hyperspace(P, standoff) { const start = ship.position.clone(); const dir = P.clone().sub(start); const dist = dir.length(); dir.normalize(); const D = Math.max(0, dist - (standoff + 12)); warpRun = { start, dir, D, T: Math.min(3.6, 1.4 + D / 380), P: P.clone() }; warpPhase = "fly"; warpT = 0; audio.play.warp(warpRun.T); }
   function updateWarp(dt) {
     if (!warpPhase) { warp += (0 - warp) * Math.min(1, dt * 6); }
     else {
