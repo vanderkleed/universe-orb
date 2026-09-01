@@ -2,8 +2,8 @@
 // remembered). Everything runs through one master gain so the toggle fades rather than cuts.
 //   ambient   — detuned low sines through a slow-breathing lowpass
 //   wind      — brown noise whose level and brightness follow the ship's speed
-//   warp      — the hyperspace jump, scheduled as one event: a rising charge, a boom at the flash,
-//               a bright whoosh that falls away as you come out the other side
+//   warp      — the hyperspace jump, scheduled as one event and kept low and soft: a breath in,
+//               a rounded thud at the flash, a slow exhale
 //   tick      — a tiny blip when the scanner or a planet is hovered
 //   select    — a soft two-note chime when you commit to a dataset or galaxy
 //   arrive    — a low, warm settle when the autopilot reaches its target
@@ -60,39 +60,34 @@ export function createAudio(opts = {}) {
     open() { tone(880, { d: 0.25, g: 0.04, slide: 1320 }); },
     close() { tone(880, { d: 0.2, g: 0.03, slide: 660 }); },
 
-    // The jump. T is the flight time; the visual flash peaks at T/2, so the boom lands there.
+    // The jump, kept low and soft so it stays pleasant across many jumps: a deep breath in (a sub
+    // tone rising with a warm harmonic above it), a rounded thud at the flash, and a slow low exhale
+    // as you drop out the other side. Nothing above ~600 Hz. T is the flight time; the flash is at T/2.
     warp(T = 2.4) {
       if (!on || !ctx) return;
-      const t0 = ctx.currentTime, mid = t0 + T * 0.5, end = t0 + T + 1.2;
+      const t0 = ctx.currentTime, rise = Math.max(0.8, T * 0.5), mid = t0 + rise, end = mid + 1.6;
       const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(master);
 
-      // 1. charge: a pair of detuned saws whose pitch and bandpass climb together, level swelling
-      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 3.5;
-      bp.frequency.setValueAtTime(140, t0); bp.frequency.exponentialRampToValueAtTime(3600, mid); bp.frequency.exponentialRampToValueAtTime(220, mid + 0.7);
-      const cg = ctx.createGain(); cg.gain.setValueAtTime(0.0001, t0); cg.gain.exponentialRampToValueAtTime(0.22, mid - 0.05); cg.gain.setValueAtTime(0.22, mid); cg.gain.exponentialRampToValueAtTime(0.0001, mid + 0.6);
-      bp.connect(cg); cg.connect(bus);
-      [0, 7, -5].forEach(det => { const o = ctx.createOscillator(); o.type = "sawtooth"; o.detune.value = det; o.frequency.setValueAtTime(60, t0); o.frequency.exponentialRampToValueAtTime(520, mid); o.frequency.exponentialRampToValueAtTime(90, mid + 0.7); o.connect(bp); o.start(t0); o.stop(mid + 0.8); });
-      // a rumble that builds under the charge
-      const r = ctx.createOscillator(); r.type = "sine"; r.frequency.setValueAtTime(38, t0); r.frequency.linearRampToValueAtTime(48, mid);
-      const rg = ctx.createGain(); rg.gain.setValueAtTime(0.0001, t0); rg.gain.exponentialRampToValueAtTime(0.3, mid); rg.gain.exponentialRampToValueAtTime(0.0001, mid + 1.2);
-      r.connect(rg); rg.connect(bus); r.start(t0); r.stop(mid + 1.3);
+      // breath in: a sub sine gliding up an octave, with a filtered triangle a fifth above it
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 0.8; lp.frequency.setValueAtTime(220, t0); lp.frequency.exponentialRampToValueAtTime(520, mid); lp.frequency.exponentialRampToValueAtTime(160, end);
+      const ig = ctx.createGain(); ig.gain.setValueAtTime(0.0001, t0); ig.gain.exponentialRampToValueAtTime(0.42, mid); ig.gain.setValueAtTime(0.42, mid + 0.05); ig.gain.exponentialRampToValueAtTime(0.0001, end);
+      lp.connect(ig); ig.connect(bus);
+      [[1, "sine", 1], [1.5, "triangle", 0.35], [2, "sine", 0.18]].forEach(([k, type, g]) => {
+        const o = ctx.createOscillator(); o.type = type;
+        o.frequency.setValueAtTime(44 * k, t0); o.frequency.exponentialRampToValueAtTime(88 * k, mid); o.frequency.exponentialRampToValueAtTime(50 * k, end);
+        const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(lp); o.start(t0); o.stop(end + 0.1);
+      });
 
-      // 2. the boom at the flash: a sine that drops from 90 to 28 Hz with a fast decay, plus a click
-      const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(90, mid); b.frequency.exponentialRampToValueAtTime(28, mid + 0.9);
-      const bg = ctx.createGain(); bg.gain.setValueAtTime(0.0001, mid - 0.01); bg.gain.linearRampToValueAtTime(0.9, mid + 0.012); bg.gain.exponentialRampToValueAtTime(0.0001, mid + 1.4);
-      b.connect(bg); bg.connect(bus); b.start(mid - 0.01); b.stop(mid + 1.5);
-      const clk = ctx.createBufferSource(); clk.buffer = noise; const ck = ctx.createGain(); ck.gain.setValueAtTime(0.35, mid); ck.gain.exponentialRampToValueAtTime(0.0001, mid + 0.06); clk.connect(ck); ck.connect(bus); clk.start(mid); clk.stop(mid + 0.08);
+      // the thud at the flash: a rounded sine drop and a puff of low air
+      const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(74, mid); b.frequency.exponentialRampToValueAtTime(34, mid + 0.5);
+      const bg = ctx.createGain(); bg.gain.setValueAtTime(0.0001, mid - 0.01); bg.gain.linearRampToValueAtTime(0.55, mid + 0.02); bg.gain.exponentialRampToValueAtTime(0.0001, mid + 0.8);
+      b.connect(bg); bg.connect(bus); b.start(mid - 0.01); b.stop(mid + 0.9);
 
-      // 3. the whoosh: white noise through a highpass that starts bright and falls away as you decelerate
-      const w = ctx.createBufferSource(); w.buffer = noise; w.loop = true;
-      const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.Q.value = 0.9; hp.frequency.setValueAtTime(5000, mid); hp.frequency.exponentialRampToValueAtTime(140, end);
-      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.setValueAtTime(12000, mid); lp.frequency.exponentialRampToValueAtTime(900, end);
-      const wg = ctx.createGain(); wg.gain.setValueAtTime(0.0001, t0); wg.gain.exponentialRampToValueAtTime(0.06, mid - 0.02); wg.gain.linearRampToValueAtTime(0.55, mid + 0.05); wg.gain.exponentialRampToValueAtTime(0.0001, end);
-      w.connect(hp); hp.connect(lp); lp.connect(wg); wg.connect(bus); w.start(t0); w.stop(end + 0.1);
-      // a thin pitched tail that falls like a doppler shift
-      const d = ctx.createOscillator(); d.type = "triangle"; d.frequency.setValueAtTime(1400, mid); d.frequency.exponentialRampToValueAtTime(180, end);
-      const dg = ctx.createGain(); dg.gain.setValueAtTime(0.0001, mid); dg.gain.linearRampToValueAtTime(0.07, mid + 0.05); dg.gain.exponentialRampToValueAtTime(0.0001, end - 0.2);
-      d.connect(dg); dg.connect(bus); d.start(mid); d.stop(end);
+      // breath out: low-passed noise that opens briefly at the flash and settles
+      const n = ctx.createBufferSource(); n.buffer = noise; n.loop = true;
+      const nl = ctx.createBiquadFilter(); nl.type = "lowpass"; nl.Q.value = 0.7; nl.frequency.setValueAtTime(140, t0); nl.frequency.exponentialRampToValueAtTime(600, mid + 0.05); nl.frequency.exponentialRampToValueAtTime(120, end);
+      const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t0); ng.gain.exponentialRampToValueAtTime(0.05, mid - 0.02); ng.gain.linearRampToValueAtTime(0.32, mid + 0.06); ng.gain.exponentialRampToValueAtTime(0.0001, end);
+      n.connect(nl); nl.connect(ng); ng.connect(bus); n.start(t0); n.stop(end + 0.1);
     },
   };
 
