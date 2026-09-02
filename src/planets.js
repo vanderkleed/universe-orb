@@ -26,8 +26,8 @@ export function buildPlanets(scene, layout, imagery) {
   // datasets whose count is not yet indexed fall back to a hash-derived small size
   const sizeOf = (n, sz) => {
     if (!(n > 0)) return 0.18 + sz * 0.25;
-    const t = Math.min(1, Math.max(0, (Math.log10(n) - 0.9) / 3.8));
-    return 0.09 + 2.1 * Math.pow(t, 1.6);
+    const t = Math.min(1, Math.max(0, (Math.log10(n) - 2.18) / 2.52));
+    return 0.09 + 2.1 * Math.pow(t, 1.8);
   };
   // below SPECK, a dataset never materializes on its own — it stays a star speck, and its photo
   // appears only when clicked (the focused item is pinned into the pool). The dust is the point.
@@ -63,10 +63,18 @@ export function buildPlanets(scene, layout, imagery) {
   // reassign the pool to the imaged datasets that LOOK biggest from here (apparent size = size/distance),
   // so photo bodies scatter naturally across the whole field instead of forming a bubble around the ship;
   // whatever falls off the pool is too small to distinguish from a star anyway.
+  // ...and with breathing room: a body is skipped when it would sit on top of an already-chosen one
+  // (spacing grows with distance, i.e. roughly constant on screen), so cores read as a few worlds in
+  // heavy dust instead of a wall of photos.
   function assign(shipPos, pinned) {
-    const cand = near(shipPos, RANGE)
-      .sort((a, b) => a[1] / a[0].size - b[1] / b[0].size)
-      .slice(0, POOL).map(c => c[0]);
+    const sorted = near(shipPos, RANGE).sort((a, b) => a[1] / a[0].size - b[1] / b[0].size);
+    const cand = [];
+    for (const [it, d] of sorted) {
+      if (cand.length >= POOL) break;
+      const sep = Math.max(3, d * 0.09); const s2 = sep * sep; let ok = true;
+      for (const c of cand) if (c.pos.distanceToSquared(it.pos) < s2) { ok = false; break; }
+      if (ok) cand.push(it);
+    }
     if (pinned && !cand.includes(pinned)) cand[cand.length - 1] = pinned;
     const want = new Set(cand);
     const free = [];
