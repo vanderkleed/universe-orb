@@ -25,9 +25,9 @@ export function buildPlanets(scene, layout, imagery) {
   // only the truly huge ones read as planets — the sky keeps its dust even at full imagery coverage);
   // datasets whose count is not yet indexed fall back to a hash-derived small size
   const sizeOf = (n, sz) => {
-    if (!(n > 0)) return 0.32 + sz * 0.3;
+    if (!(n > 0)) return 0.18 + sz * 0.25;
     const t = Math.min(1, Math.max(0, (Math.log10(n) - 0.9) / 3.8));
-    return 0.15 + 2.05 * Math.pow(t, 1.5);
+    return 0.09 + 2.1 * Math.pow(t, 1.6);
   };
   const items = []; const v = new THREE.Vector3();
   for (const [slug, dom, j, cover, n] of imagery) {
@@ -56,13 +56,13 @@ export function buildPlanets(scene, layout, imagery) {
     return out;
   }
 
-  // reassign the pool to the nearest imaged datasets (call every few frames).
-  // Materialization range scales with body size: big worlds resolve from far away, small moons only
-  // pop in up close — so from a distance the field stays a scatter of dots however many have covers.
+  // reassign the pool to the imaged datasets that LOOK biggest from here (apparent size = size/distance),
+  // so photo bodies scatter naturally across the whole field instead of forming a bubble around the ship;
+  // whatever falls off the pool is too small to distinguish from a star anyway.
   function assign(shipPos, pinned) {
     const cand = near(shipPos, RANGE)
-      .filter(([it, d]) => d < RANGE * (0.22 + 0.78 * Math.min(1, it.size / 2.2)))
-      .sort((a, b) => a[1] - b[1]).slice(0, POOL).map(c => c[0]);
+      .sort((a, b) => a[1] / a[0].size - b[1] / b[0].size)
+      .slice(0, POOL).map(c => c[0]);
     if (pinned && !cand.includes(pinned)) cand[cand.length - 1] = pinned;
     const want = new Set(cand);
     const free = [];
@@ -70,6 +70,9 @@ export function buildPlanets(scene, layout, imagery) {
     for (const it of cand) {
       if (it.mesh) continue; const m = free.pop(); if (!m) break;
       it.mesh = m; m.userData.item = it; m.position.copy(it.pos); m.scale.setScalar(it.size); m.visible = true;
+      const k = Math.min(1, Math.max(0, (it.size - 0.12) / 0.8));   // specks get no ring or glow — they read as stars
+      m.userData.edge.material.opacity = 0.2 * k;
+      m.userData.glow.material.opacity = 0.3 * k;
       m.material.map = placeholder; m.material.needsUpdate = true;
       const url = thumbUrl(it.cover); m.userData.url = url;
       texture(url, tex => { if (m.userData.url === url && tex) { m.material.map = tex; m.material.needsUpdate = true; } });
