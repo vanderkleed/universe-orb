@@ -170,7 +170,7 @@ async function boot() {
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
-  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, Q/E roll, hold Shift for turbo
+  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, Q/E spin (roll about the view axis), hold Shift for turbo
   const keys = { w: 0, s: 0, a: 0, d: 0, q: 0, e: 0, boost: 0 };
   const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", arrowleft: "a", d: "d", arrowright: "d", q: "q", e: "e" };
   addEventListener("keydown", e => {
@@ -298,7 +298,7 @@ async function boot() {
     const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
     fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
-    camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
+    camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
