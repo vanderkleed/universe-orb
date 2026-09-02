@@ -290,7 +290,7 @@ async function boot() {
     const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d, rollIn = keys.q - keys.e;
     if ((fwdIn || turn || rollIn) && auto) { auto = null; pendingWarp = null; }
     if (turn) tYaw += turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9);
-    if (rollIn) tRoll += rollIn * dt * 1.7; else if (auto) tRoll += (0 - tRoll) * Math.min(1, dt * 1.5);
+    if (rollIn) tRoll += rollIn * dt * 1.7;
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
     const py = yaw; yaw += wrap(tYaw - yaw) * Math.min(1, dt * 4.5); pitch += (tPitch - pitch) * Math.min(1, dt * 4.5); roll += (tRoll - roll) * Math.min(1, dt * 4.5); yawVel = (yaw - py) / Math.max(dt, 1e-3);
     ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, roll, "YXZ"));
