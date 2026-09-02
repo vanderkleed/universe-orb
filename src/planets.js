@@ -21,9 +21,14 @@ function texture(url, cb) {
 export function buildPlanets(scene, layout, imagery) {
   // imagery: [ [slug, galaxy, index, coverKey], ... ]
   // Each item's pos is refreshed from the orbit model (galaxies rotate), so positions are never cached for long.
-  // size follows the dataset's image count (log scale, ~150 images tiny, 50k+ images planetary);
-  // datasets whose count is not yet indexed fall back to a hash-derived size
-  const sizeOf = (n, sz) => n > 0 ? 0.38 + 1.8 * Math.min(1, Math.max(0, (Math.log10(n) - 2.05) / 2.65)) : 0.5 + sz * 0.35;
+  // size follows the dataset's image count (log scale, curved so most datasets stay small moons and
+  // only the truly huge ones read as planets — the sky keeps its dust even at full imagery coverage);
+  // datasets whose count is not yet indexed fall back to a hash-derived small size
+  const sizeOf = (n, sz) => {
+    if (!(n > 0)) return 0.32 + sz * 0.3;
+    const t = Math.min(1, Math.max(0, (Math.log10(n) - 0.9) / 3.8));
+    return 0.15 + 2.05 * Math.pow(t, 1.5);
+  };
   const items = []; const v = new THREE.Vector3();
   for (const [slug, dom, j, cover, n] of imagery) {
     const G = layout.galaxies[dom]; if (!G) continue;
@@ -51,9 +56,13 @@ export function buildPlanets(scene, layout, imagery) {
     return out;
   }
 
-  // reassign the pool to the nearest imaged datasets (call every few frames)
+  // reassign the pool to the nearest imaged datasets (call every few frames).
+  // Materialization range scales with body size: big worlds resolve from far away, small moons only
+  // pop in up close — so from a distance the field stays a scatter of dots however many have covers.
   function assign(shipPos, pinned) {
-    const cand = near(shipPos, RANGE).sort((a, b) => a[1] - b[1]).slice(0, POOL).map(c => c[0]);
+    const cand = near(shipPos, RANGE)
+      .filter(([it, d]) => d < RANGE * (0.22 + 0.78 * Math.min(1, it.size / 2.2)))
+      .sort((a, b) => a[1] - b[1]).slice(0, POOL).map(c => c[0]);
     if (pinned && !cand.includes(pinned)) cand[cand.length - 1] = pinned;
     const want = new Set(cand);
     const free = [];
