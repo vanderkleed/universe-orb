@@ -6,14 +6,14 @@ export const thumbUrl = key => `${CDN}${key}/thumb.jpg`;      // 200px wide
 export const originalUrl = key => `${CDN}${key}/original.jpg`;
 
 export async function loadManifest() {
-  const r = await fetch(`${BASE}/data/manifest.json`);
+  const r = await fetch(`${BASE}/data/manifest.json`, { cache: "no-cache" });   // revalidate: the index rebuilds nightly
   if (!r.ok) throw new Error("manifest missing: run `npm run index`");
   return r.json();
 }
 
 // imagery.json: [ [slug, galaxy, indexInGalaxy, coverKey], ... ]
 export async function loadImagery() {
-  const r = await fetch(`${BASE}/data/imagery.json`);
+  const r = await fetch(`${BASE}/data/imagery.json`, { cache: "no-cache" });
   return r.ok ? r.json() : [];
 }
 
