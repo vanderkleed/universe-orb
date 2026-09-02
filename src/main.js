@@ -59,7 +59,7 @@ async function boot() {
   }
 
   /* ---------- flight ---------- */
-  let yaw = 0.4, pitch = 0, tYaw = 0.4, tPitch = 0, yawVel = 0, speed = 0, thrust = 0;
+  let yaw = 0.4, pitch = 0, tYaw = 0.4, tPitch = 0, roll = 0, tRoll = 0, yawVel = 0, speed = 0, thrust = 0;
   const CRUISE = reduce ? 0 : 0.5, JUMP = 110;
   let auto = null;
   const fwd = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), v3 = new THREE.Vector3();
@@ -170,9 +170,9 @@ async function boot() {
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
-  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, hold Shift for turbo
-  const keys = { w: 0, s: 0, a: 0, d: 0, boost: 0 };
-  const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", arrowleft: "a", d: "d", arrowright: "d" };
+  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, Q/E roll, hold Shift for turbo
+  const keys = { w: 0, s: 0, a: 0, d: 0, q: 0, e: 0, boost: 0 };
+  const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", arrowleft: "a", d: "d", arrowright: "d", q: "q", e: "e" };
   addEventListener("keydown", e => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     if (e.key === "Shift") keys.boost = 1;
@@ -180,7 +180,7 @@ async function boot() {
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
     if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
-  addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.boost = 0; });
+  addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.q = keys.e = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
 
   const ray = new THREE.Raycaster();
@@ -287,12 +287,13 @@ async function boot() {
         arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
-    const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d;
-    if ((fwdIn || turn) && auto) { auto = null; pendingWarp = null; }
+    const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d, rollIn = keys.q - keys.e;
+    if ((fwdIn || turn || rollIn) && auto) { auto = null; pendingWarp = null; }
     if (turn) tYaw += turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9);
+    if (rollIn) tRoll += rollIn * dt * 1.7; else if (auto) tRoll += (0 - tRoll) * Math.min(1, dt * 1.5);
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
-    const py = yaw; yaw += wrap(tYaw - yaw) * Math.min(1, dt * 4.5); pitch += (tPitch - pitch) * Math.min(1, dt * 4.5); yawVel = (yaw - py) / Math.max(dt, 1e-3);
-    ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, "YXZ"));
+    const py = yaw; yaw += wrap(tYaw - yaw) * Math.min(1, dt * 4.5); pitch += (tPitch - pitch) * Math.min(1, dt * 4.5); roll += (tRoll - roll) * Math.min(1, dt * 4.5); yawVel = (yaw - py) / Math.max(dt, 1e-3);
+    ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, roll, "YXZ"));
     camRig.rotation.z += ((-yawVel * 0.1) - camRig.rotation.z) * Math.min(1, dt * 3);
     const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
     fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
