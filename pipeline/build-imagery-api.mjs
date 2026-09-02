@@ -22,11 +22,14 @@ const shardOf = slug => { let h = 0; for (const ch of slug) h = (h * 31 + ch.cha
 
 async function readJSON(p, dflt) { try { return JSON.parse(await fs.readFile(p, "utf8")); } catch { return dflt; } }
 
-// the icon may arrive as a bare "owner/imageId" key or a full source.roboflow.com URL
+// the icon arrives as an object of URLs ({original, thumb, annotation}), a full source.roboflow.com
+// URL, or a bare "owner/imageId" key — extract the owner/imageId pair from whichever shape shows up
 function coverKey(icon) {
-  if (!icon || typeof icon !== "string") return null;
-  const m = icon.match(/source\.roboflow\.com\/([^/]+\/[^/.]+)/); if (m) return m[1];
-  if (/^[A-Za-z0-9]+\/[A-Za-z0-9]+$/.test(icon)) return icon;
+  const strs = typeof icon === "string" ? [icon] : (icon && typeof icon === "object" ? Object.values(icon).filter(v => typeof v === "string") : []);
+  for (const s of strs) {
+    const m = s.match(/source\.roboflow\.com\/([^/]+\/[^/.?]+)/); if (m) return m[1];
+    if (/^[A-Za-z0-9]+\/[A-Za-z0-9]+$/.test(s)) return s;
+  }
   return null;
 }
 
@@ -65,7 +68,7 @@ async function main() {
           else {
             miss++;
             shards[shardOf(slug)][slug] = { ...prev, t: stamp, ...(n ? { n } : {}) };
-            if (!shownShape) { shownShape = true; console.log("  no cover in response; project keys were:", Object.keys(p).join(",")); }
+            if (!shownShape) { shownShape = true; console.log("  no cover; icon value was:", JSON.stringify(p.icon || null).slice(0, 140)); }
           }
         }
       } catch (e) { /* leave for next run */ }
