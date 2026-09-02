@@ -36,8 +36,9 @@ export function buildPlanets(scene, layout, imagery) {
   for (const [slug, dom, j, cover, n] of imagery) {
     const G = layout.galaxies[dom]; if (!G) continue;
     const sz = starAt(G, j, v);
-    const size = sizeOf(n, sz);
-    items.push({ slug, dom, j, G, cover, n: n || 0, pos: v.clone(), size, speck: size < SPECK, mesh: null });
+    const raw = sizeOf(n, sz);
+    // rendered size never drops below 0.42 so a clicked speck reveals at a readable scale
+    items.push({ slug, dom, j, G, cover, n: n || 0, pos: v.clone(), size: Math.max(raw, 0.42), speck: raw < SPECK, mesh: null });
   }
   const bySlug = new Map(items.map(it => [it.slug, it]));
   const update = (it, t = now()) => starNow(it.G, it.j, t, it.pos);
@@ -66,11 +67,15 @@ export function buildPlanets(scene, layout, imagery) {
   // ...and with breathing room: a body is skipped when it would sit on top of an already-chosen one
   // (spacing grows with distance, i.e. roughly constant on screen), so cores read as a few worlds in
   // heavy dust instead of a wall of photos.
+  // Selection is sticky: a body already on screen keeps its slot while it stays in range, so nothing
+  // blinks out mid-view; the spacing test gates only newcomers, which grow in from zero scale.
   function assign(shipPos, pinned) {
     const sorted = near(shipPos, RANGE).sort((a, b) => a[1] / a[0].size - b[1] / b[0].size);
     const cand = [];
+    for (const [it] of sorted) { if (cand.length >= POOL) break; if (it.mesh) cand.push(it); }
     for (const [it, d] of sorted) {
       if (cand.length >= POOL) break;
+      if (it.mesh) continue;
       const sep = Math.max(3, d * 0.09); const s2 = sep * sep; let ok = true;
       for (const c of cand) if (c.pos.distanceToSquared(it.pos) < s2) { ok = false; break; }
       if (ok) cand.push(it);
@@ -81,7 +86,7 @@ export function buildPlanets(scene, layout, imagery) {
     for (const m of pool) { const it = m.userData.item; if (it && !want.has(it)) { it.mesh = null; m.userData.item = null; m.visible = false; } if (!m.userData.item) free.push(m); }
     for (const it of cand) {
       if (it.mesh) continue; const m = free.pop(); if (!m) break;
-      it.mesh = m; m.userData.item = it; m.position.copy(it.pos); m.scale.setScalar(Math.max(it.size, 0.42)); m.visible = true;   // a clicked speck reveals at a readable size
+      it.mesh = m; m.userData.item = it; m.position.copy(it.pos); m.scale.setScalar(0.01); m.visible = true;   // grows in via the frame loop's scale lerp
       const k = Math.min(1, Math.max(0, (it.size - 0.12) / 0.8));   // small bodies keep ring + glow subtle
       m.userData.edge.material.opacity = 0.2 * k;
       m.userData.glow.material.opacity = 0.3 * k;
