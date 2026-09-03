@@ -182,27 +182,35 @@ async function boot() {
   }
 
   /* ---------- comets: datasets touched this month or last streak with a faint tail ---------- */
-  const NC = 80; const cGeo = new THREE.BufferGeometry();
-  const cPos = new Float32Array(NC * 6), cCol = new Float32Array(NC * 6);
+  // each tail is three tapered segments (6 vertices) that sway slowly, so they read as plumes, not rods
+  const NC = 80, SEG = 3; const cGeo = new THREE.BufferGeometry();
+  const cPos = new Float32Array(NC * SEG * 6), cCol = new Float32Array(NC * SEG * 6);
   cGeo.setAttribute("position", new THREE.BufferAttribute(cPos, 3)); cGeo.setAttribute("color", new THREE.BufferAttribute(cCol, 3));
-  const comets = new THREE.LineSegments(cGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const comets = new THREE.LineSegments(cGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
   comets.frustumCulled = false; comets.visible = false; scene.add(comets);
-  let cometIdx = []; const cq = new THREE.Vector3();
+  let cometIdx = []; const cq = new THREE.Vector3(), cn = new THREE.Vector3(), cp = new THREE.Vector3();
+  const TAPER = [1, 0.42, 0.14, 0], KNOT = [0, 0.3, 0.62, 1];
   function pickComets() {
     if (!births || replaying) { comets.visible = false; return; }
     const cutoff = sortedBirths[sortedBirths.length - 1] - 1;
     cometIdx = stars.near(ship.position, 110).filter(([i]) => births[i] >= cutoff).sort((a, b) => a[1] - b[1]).slice(0, NC).map(c => c[0]);
-    comets.visible = cometIdx.length > 0; cGeo.setDrawRange(0, cometIdx.length * 2);
+    comets.visible = cometIdx.length > 0; cGeo.setDrawRange(0, cometIdx.length * SEG * 2);
   }
   function updateComets() {
     for (let n = 0; n < cometIdx.length; n++) {
       const i = cometIdx[n]; stars.positionOf(i, v3);
       const G = galaxies[stars.galaxyOf(i)];   // tail trails the star's orbital motion
       if (G.id === 0) cq.set(-v3.z, 0, v3.x); else { tmp.copy(v3).sub(G.center).applyQuaternion(G.qInv); cq.set(-tmp.z, 0, tmp.x).multiplyScalar(G.spin).applyQuaternion(G.q); }
-      cq.normalize().multiplyScalar(1.4 + (i % 7) * 0.15);
-      cPos[n * 6] = v3.x; cPos[n * 6 + 1] = v3.y; cPos[n * 6 + 2] = v3.z; cPos[n * 6 + 3] = v3.x - cq.x; cPos[n * 6 + 4] = v3.y - cq.y; cPos[n * 6 + 5] = v3.z - cq.z;
-      const tw = 0.7 + 0.3 * Math.sin(t * 2.1 + i);
-      cCol[n * 6] = cCol[n * 6 + 1] = cCol[n * 6 + 2] = tw; cCol[n * 6 + 3] = cCol[n * 6 + 4] = cCol[n * 6 + 5] = 0;
+      const L = 0.8 + (i % 7) * 0.13; cq.normalize();
+      cn.set(cq.y, -cq.x, 0.3).normalize();   // sideways drift axis for the sway
+      const sway = Math.sin(t * 0.6 + i * 0.37) * 0.16, tw = 0.75 + 0.25 * Math.sin(t * 1.7 + i);
+      let o = n * SEG * 6;
+      for (let s = 0; s < SEG; s++) for (let e = 0; e < 2; e++) {
+        const k = KNOT[s + e];
+        cp.copy(v3).addScaledVector(cq, -L * k).addScaledVector(cn, sway * k * k);
+        cPos[o] = cp.x; cPos[o + 1] = cp.y; cPos[o + 2] = cp.z;
+        cCol[o] = cCol[o + 1] = cCol[o + 2] = TAPER[s + e] * tw; o += 3;
+      }
     }
     cGeo.attributes.position.needsUpdate = true; cGeo.attributes.color.needsUpdate = true;
   }
