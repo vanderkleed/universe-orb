@@ -13,6 +13,16 @@ export function createAudio(opts = {}) {
   let ctx = opts.context || null, master = null, on = false, built = false;
   let wind = null, windFilter = null, padGain = null, noise = null;
   let lastTick = 0;
+  // each galaxy transposes the pad a few semitones and recolours its inner interval (fifth / major
+  // third / minor third), so crossing into a sector is felt before it is read; interstellar = home key
+  const padOsc = []; let sector = 0;
+  const SEMIS = [0, 2, -3, 5, -5, 7, 3, -2], COLOR = [1.5, 1.2599, 1.1892];
+  function setSector(id) {
+    sector = id; if (!built) return;
+    const semi = id === 0 ? 0 : SEMIS[(id * 5) % 8], ratio = Math.pow(2, semi / 12), col = id === 0 ? 1.5 : COLOR[id % 3];
+    const t = ctx.currentTime;
+    for (const p of padOsc) p.o.frequency.setTargetAtTime((p.color ? 110 * col : p.base) * ratio, t, 2.5);
+  }
   const remembered = (() => { try { return localStorage.getItem(KEY) === "on"; } catch { return false; } })();
 
   function noiseBuffer(seconds, brown) {
@@ -29,7 +39,8 @@ export function createAudio(opts = {}) {
     // ambient pad: low sines, an octave, a fifth and a detuned copy, very quiet, slowly breathing
     padGain = ctx.createGain(); padGain.gain.value = 0.05; padGain.connect(master);
     const padFilter = ctx.createBiquadFilter(); padFilter.type = "lowpass"; padFilter.frequency.value = 320; padFilter.connect(padGain);
-    [[55, 0], [110, 4], [164.8, -3], [220, 6]].forEach(([f, det]) => { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; o.detune.value = det; const g = ctx.createGain(); g.gain.value = f < 100 ? 1 : 0.35; o.connect(g); g.connect(padFilter); o.start(); });
+    [[55, 0], [110, 4], [164.8, -3], [220, 6]].forEach(([f, det]) => { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; o.detune.value = det; const g = ctx.createGain(); g.gain.value = f < 100 ? 1 : 0.35; o.connect(g); g.connect(padFilter); o.start(); padOsc.push({ o, base: f, color: f > 150 && f < 200 }); });
+    if (sector) setSector(sector);
     const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05; const lfoG = ctx.createGain(); lfoG.gain.value = 120; lfo.connect(lfoG); lfoG.connect(padFilter.frequency); lfo.start();
 
     // wind: brown noise through a lowpass whose cutoff and level follow speed
@@ -104,5 +115,5 @@ export function createAudio(opts = {}) {
   // browsers require a gesture before audio can start: if sound was remembered on, arm it on the first one
   if (remembered && !opts.context) { const arm = () => { setOn(true); removeEventListener("pointerdown", arm); removeEventListener("keydown", arm); }; addEventListener("pointerdown", arm); addEventListener("keydown", arm); }
 
-  return { get on() { return on; }, remembered, toggle: () => setOn(!on), set: setOn, play, update, onChange: f => listeners.push(f), get context() { return ctx; } };
+  return { get on() { return on; }, remembered, toggle: () => setOn(!on), set: setOn, play, update, setSector, onChange: f => listeners.push(f), get context() { return ctx; } };
 }
