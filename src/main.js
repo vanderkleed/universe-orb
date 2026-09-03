@@ -139,6 +139,48 @@ async function boot() {
   }
   $("rnd").addEventListener("click", randomJump);
 
+  /* ---------- big bang: replay every dataset's arrival in creation order ---------- */
+  const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  let births = null, sortedBirths = null, replaying = false;
+  async function loadBirths() {
+    if (births) return;
+    const attr = stars.birthAttr, arr = attr.array;
+    for (const k of [...domains, "Uncharted"]) {
+      const lists = await galaxyShards(manifest, k);
+      let j = 0; const s = stars.start[k];
+      for (const list of lists) for (const e of list) {
+        const lm = e[1] || "";
+        let m;
+        if (/^\d{4}-\d{2}/.test(lm)) m = (+lm.slice(0, 4) - 2020) * 12 + (+lm.slice(5, 7) - 1);
+        else m = 20 + (((j * 2654435761) >>> 0) % 1000) / 1000 * 44;   // undated: scatter through mid-history
+        arr[s + j] = Math.max(0, m); j++;
+      }
+    }
+    attr.needsUpdate = true; births = arr;
+    sortedBirths = Float32Array.from(arr).sort();
+  }
+  const bornCount = play => { let lo = 0, hi = sortedBirths.length; while (lo < hi) { const m = (lo + hi) >> 1; if (sortedBirths[m] <= play) lo = m + 1; else hi = m; } return lo; };
+  async function bigbang() {
+    if (replaying) return; replaying = true;
+    $("ep-d").textContent = "Reading the record…"; $("ep-c").textContent = ""; $("epoch").classList.add("on");
+    try { await loadBirths(); } catch { $("epoch").classList.remove("on"); replaying = false; return; }
+    release(true); planets.group.visible = false;
+    const lo = sortedBirths[0], hi = sortedBirths[sortedBirths.length - 1];
+    const D = 16, t0 = performance.now(); let lastYear = -1;
+    (function step() {
+      const u = Math.min(1, (performance.now() - t0) / 1000 / D);
+      const e2 = u * u * (3 - 2 * u);
+      const play = lo - 1.2 + (hi - lo + 3) * e2;
+      stars.setPlay(play);
+      const mAbs = Math.max(0, Math.min(hi, play)); const yr = 2020 + Math.floor(mAbs / 12);
+      $("ep-d").textContent = `${MO[Math.floor(mAbs) % 12]} ${yr}`;
+      $("ep-c").textContent = `${fmt(bornCount(play))} datasets`;
+      if (yr !== lastYear) { lastYear = yr; audio.play.tick(); }
+      if (u < 1) requestAnimationFrame(step);
+      else setTimeout(() => { stars.setPlay(1e9); planets.group.visible = true; $("epoch").classList.remove("on"); replaying = false; }, 1600);
+    })();
+  }
+
   /* ---------- guide + one-time hints ---------- */
   const SEEN = "universe-orb:seen";
   const seen = (() => { try { return new Set(JSON.parse(localStorage.getItem(SEEN) || "[]")); } catch { return new Set(); } })();
@@ -178,7 +220,7 @@ async function boot() {
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
-    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
+    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
   addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.q = keys.e = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
