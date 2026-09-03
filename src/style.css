@@ -168,3 +168,8 @@
   .hint.show{opacity:1;transform:translate(-50%,0)}
   .hint kbd{font-family:inherit;border:1px solid var(--hair);padding:0 4px}
   @media (max-width:720px){.hint{white-space:normal;text-align:center}.guide .keysg div:first-child{display:none}}
+  /* big bang replay readout */
+  .epoch{position:fixed;left:50%;bottom:14%;transform:translateX(-50%);text-align:center;z-index:16;opacity:0;transition:opacity .6s;pointer-events:none}
+  .epoch.on{opacity:1}
+  .epoch .d{font-family:var(--sans);font-weight:500;font-size:30px;letter-spacing:-0.015em;color:var(--ink)}
+  .epoch .c{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-top:9px}
