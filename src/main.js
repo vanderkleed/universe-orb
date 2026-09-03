@@ -65,6 +65,9 @@ async function boot() {
   const fwd = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), v3 = new THREE.Vector3();
   const headingTo = vv => { const len = vv.length() || 1; return { yaw: Math.atan2(-vv.x, -vv.z), pitch: Math.asin(Math.max(-1, Math.min(1, vv.y / len))) }; };
   const wrap = a => { while (a > Math.PI) a -= 6.283185; while (a < -Math.PI) a += 6.283185; return a; };
+  // steer in the pilot's own frame: a turn (h) is about the ship's up axis and a pitch (v) about its
+  // right axis, so after a spin the controls still mean what the pilot sees (rolled 180°, left is left)
+  const steer = (h, v) => { const c = Math.cos(roll), s = Math.sin(roll); tYaw += h * c + v * s; tPitch = Math.max(-1.3, Math.min(1.3, tPitch + v * c - h * s)); };
   function flyTo(P, standoff) {
     auto = { target: P.clone(), standoff }; tCamDist = 6.5;
     const dist = P.distanceTo(ship.position);
@@ -244,7 +247,7 @@ async function boot() {
   canvas.addEventListener("pointermove", e => {
     mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; mx = e.clientX; my = e.clientY;
     if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-    if (moved > 6) { canvas.classList.add("dragging"); if (auto) auto = null; tYaw -= dx * 0.0038; tPitch = Math.max(-1.3, Math.min(1.3, tPitch + dy * 0.0032)); }
+    if (moved > 6) { canvas.classList.add("dragging"); if (auto) auto = null; steer(-dx * 0.0038, dy * 0.0032); }
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
@@ -369,7 +372,7 @@ async function boot() {
     }
     const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d, rollIn = keys.q - keys.e;
     if ((fwdIn || turn || rollIn) && auto) { auto = null; pendingWarp = null; }
-    if (turn) tYaw += turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9);
+    if (turn) steer(turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9), 0);
     if (rollIn) tRoll += rollIn * dt * 1.7;
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
     const py = yaw; yaw += wrap(tYaw - yaw) * Math.min(1, dt * 4.5); pitch += (tPitch - pitch) * Math.min(1, dt * 4.5); roll += (tRoll - roll) * Math.min(1, dt * 4.5); yawVel = (yaw - py) / Math.max(dt, 1e-3);
