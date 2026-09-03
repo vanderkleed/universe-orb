@@ -181,6 +181,34 @@ async function boot() {
     })();
   }
 
+  /* ---------- comets: datasets touched this month or last streak with a faint tail ---------- */
+  const NC = 80; const cGeo = new THREE.BufferGeometry();
+  const cPos = new Float32Array(NC * 6), cCol = new Float32Array(NC * 6);
+  cGeo.setAttribute("position", new THREE.BufferAttribute(cPos, 3)); cGeo.setAttribute("color", new THREE.BufferAttribute(cCol, 3));
+  const comets = new THREE.LineSegments(cGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+  comets.frustumCulled = false; comets.visible = false; scene.add(comets);
+  let cometIdx = []; const cq = new THREE.Vector3();
+  function pickComets() {
+    if (!births || replaying) { comets.visible = false; return; }
+    const cutoff = sortedBirths[sortedBirths.length - 1] - 1;
+    cometIdx = stars.near(ship.position, 110).filter(([i]) => births[i] >= cutoff).sort((a, b) => a[1] - b[1]).slice(0, NC).map(c => c[0]);
+    comets.visible = cometIdx.length > 0; cGeo.setDrawRange(0, cometIdx.length * 2);
+  }
+  function updateComets() {
+    for (let n = 0; n < cometIdx.length; n++) {
+      const i = cometIdx[n]; stars.positionOf(i, v3);
+      const G = galaxies[stars.galaxyOf(i)];   // tail trails the star's orbital motion
+      if (G.id === 0) cq.set(-v3.z, 0, v3.x); else { tmp.copy(v3).sub(G.center).applyQuaternion(G.qInv); cq.set(-tmp.z, 0, tmp.x).multiplyScalar(G.spin).applyQuaternion(G.q); }
+      cq.normalize().multiplyScalar(1.4 + (i % 7) * 0.15);
+      cPos[n * 6] = v3.x; cPos[n * 6 + 1] = v3.y; cPos[n * 6 + 2] = v3.z; cPos[n * 6 + 3] = v3.x - cq.x; cPos[n * 6 + 4] = v3.y - cq.y; cPos[n * 6 + 5] = v3.z - cq.z;
+      const tw = 0.7 + 0.3 * Math.sin(t * 2.1 + i);
+      cCol[n * 6] = cCol[n * 6 + 1] = cCol[n * 6 + 2] = tw; cCol[n * 6 + 3] = cCol[n * 6 + 4] = cCol[n * 6 + 5] = 0;
+    }
+    cGeo.attributes.position.needsUpdate = true; cGeo.attributes.color.needsUpdate = true;
+  }
+  // the dates arrive quietly in the background so comets appear without being asked for
+  setTimeout(() => { if (!reduce && !(navigator.connection && navigator.connection.saveData)) loadBirths().catch(() => {}); }, 9000);
+
   /* ---------- guide + one-time hints ---------- */
   const SEEN = "universe-orb:seen";
   const seen = (() => { try { return new Set(JSON.parse(localStorage.getItem(SEEN) || "[]")); } catch { return new Set(); } })();
@@ -274,6 +302,7 @@ async function boot() {
       const inside = dW < G.radius * 1.1; el.style.opacity = inside ? 0.22 : Math.max(0.3, Math.min(1, 1 - (dW - 200) / 500));
       el.style.transform = `translate(${(v3.x * 0.5 + 0.5) * innerWidth}px,${(-v3.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,-50%)`; });
   }
+  let lastSector = -1;
   function updateReadout() {
     let key, name, meta;
     if (focus) { key = auto ? "Flying to" : "Holding at"; name = prettyName(focus.slug); meta = `<span>${focus.galaxy}</span><span>updated ${monthName(focus.lastmod)}</span>`; }
@@ -285,7 +314,8 @@ async function boot() {
     }
     readout.set(key, name, meta);
     let g = null, gd = 1e9; domains.forEach(k => { const dd = galaxies[k].center.distanceTo(ship.position); if (dd < gd) { gd = dd; g = k; } });
-    readout.sector(gd < galaxies[g].radius * 1.15 ? g : "Interstellar");
+    const inSector = gd < galaxies[g].radius * 1.15; readout.sector(inSector ? g : "Interstellar");
+    const sid = inSector ? galaxies[g].id : 0; if (sid !== lastSector) { lastSector = sid; audio.setSector(sid); }
     readout.range(auto ? fmt(Math.max(0, Math.round(auto.target.distanceTo(ship.position) - auto.standoff))) : (focus ? "0" : "—"));
   }
   buildRail(manifest, layout, goDomain);
@@ -344,6 +374,7 @@ async function boot() {
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
+    if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
     for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
       const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
@@ -372,6 +403,6 @@ async function boot() {
     for (const k of [...domains, "Uncharted"]) { const lists = await galaxyShards(manifest, k); let j = 0; for (const list of lists) { for (const e of list) { if (e[0] === slug) return stars.start[k] + j; j++; } } }
     return -1;
   }
-  window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, search, audio, keys, get speed() { return speed; }, get yaw() { return yaw; }, get pitch() { return pitch; }, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
+  window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, bigbang, comets, search, audio, keys, get births() { return births; }, get speed() { return speed; }, get yaw() { return yaw; }, get pitch() { return pitch; }, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
 }
 boot().catch(e => { console.error(e); $("intro-p").textContent = "Could not load the index. " + e.message; });
