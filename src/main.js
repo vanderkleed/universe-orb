@@ -59,7 +59,7 @@ async function boot() {
   }
 
   /* ---------- flight ---------- */
-  let yaw = 0.4, pitch = 0, tYaw = 0.4, tPitch = 0, roll = 0, tRoll = 0, yawVel = 0, speed = 0, thrust = 0;
+  let yaw = 0.4, pitch = 0, tYaw = 0.4, tPitch = 0, roll = 0, tRoll = 0, yawVel = 0, speed = 0, thrust = 0, strafe = 0;
   const CRUISE = reduce ? 0 : 0.5, JUMP = 110;
   let auto = null;
   const fwd = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), v3 = new THREE.Vector3();
@@ -251,9 +251,10 @@ async function boot() {
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
-  // WASD flight (arrow keys too): W thrust, S reverse, A/D turn, Q/E spin (roll about the view axis), hold Shift for turbo
-  const keys = { w: 0, s: 0, a: 0, d: 0, q: 0, e: 0, boost: 0 };
-  const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", arrowleft: "a", d: "d", arrowright: "d", q: "q", e: "e" };
+  // WASD moves the ship in its own frame: W thrust, S reverse, A/D slide left and right; Q/E spin about the
+  // view axis; hold Shift for turbo. Turning is the mouse's job (drag), with the arrow keys as a fallback.
+  const keys = { w: 0, s: 0, a: 0, d: 0, l: 0, r: 0, q: 0, e: 0, boost: 0 };
+  const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", d: "d", arrowleft: "l", arrowright: "r", q: "q", e: "e" };
   addEventListener("keydown", e => {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     if (e.key === "Shift") keys.boost = 1;
@@ -261,7 +262,7 @@ async function boot() {
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
     if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
-  addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.q = keys.e = keys.boost = 0; });
+  addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.l = keys.r = keys.q = keys.e = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
 
   const ray = new THREE.Raycaster();
@@ -370,8 +371,8 @@ async function boot() {
         arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
-    const fwdIn = keys.w - keys.s * 0.6, turn = keys.a - keys.d, rollIn = keys.q - keys.e;
-    if ((fwdIn || turn || rollIn) && auto) { auto = null; pendingWarp = null; }
+    const fwdIn = keys.w - keys.s * 0.6, turn = keys.l - keys.r, rollIn = keys.q - keys.e, sideIn = keys.d - keys.a;
+    if ((fwdIn || turn || rollIn || sideIn) && auto) { auto = null; pendingWarp = null; }
     if (turn) steer(turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9), 0);
     if (rollIn) tRoll += rollIn * dt * 1.7;
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
@@ -380,6 +381,8 @@ async function boot() {
     camRig.rotation.z += ((-yawVel * 0.1) - camRig.rotation.z) * Math.min(1, dt * 3);
     const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
     fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
+    strafe += (sideIn * 7 * (keys.boost ? 3.5 : 1) - strafe) * Math.min(1, dt * 5);   // A/D slide along the ship's own right axis
+    if (Math.abs(strafe) > 0.01 && !warpPhase) { tmp.set(1, 0, 0).applyQuaternion(ship.quaternion); ship.position.addScaledVector(tmp, strafe * dt); }
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
