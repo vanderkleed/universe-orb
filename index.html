@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // Normalize legacy routes before preview tooling treats the hash as a CSS selector.
+    if (location.hash) {
+      const url = new URL(location.href);
+      let destination = url.hash.slice(1);
+      try { destination = decodeURIComponent(destination); } catch {}
+      if (destination.includes("/")) {
+        url.searchParams.set("destination", destination);
+        url.hash = "";
+        history.replaceState(history.state, "", url);
+      }
+    }
+  </script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Universe · Roboflow explorer</title>
   <meta name="description" content="Fly a mirrored orb through every public dataset on Roboflow Universe.">

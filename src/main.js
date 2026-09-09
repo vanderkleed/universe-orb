@@ -10,6 +10,12 @@ import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer,
 import { thumbUrl, imageryFor } from "./data.js";
 
 const $ = id => document.getElementById(id);
+function setDestination(destination) {
+  const url = new URL(location.href);
+  url.searchParams.set("destination", destination);
+  url.hash = "";
+  history.replaceState(history.state, "", url);
+}
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const audio = createAudio();
 { const b = $("snd"); const label = on => { b.innerHTML = `Sound ${on ? "on" : "off"} <kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
@@ -128,11 +134,11 @@ async function boot() {
     flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
     openDrawer(star); showConstellation(star); tag.hide(); audio.play.select(); audio.play.open();
-    history.replaceState(null, "", "#" + star.slug);
+    setDestination(star.slug);
   }
   function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
   function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
-  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); history.replaceState(null, "", "#galaxy/" + k.toLowerCase()); }
+  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
   function randomJump() {
     const pickPlanet = Math.random() < 0.7 && planets.items.length;
     if (pickPlanet) { const it = planets.items[Math.floor(Math.random() * planets.items.length)]; enterPlanet(it); }
@@ -402,14 +408,14 @@ async function boot() {
   }
   loop();
 
-  // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL hash)
+  // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL)
   setTimeout(async () => {
     $("intro").classList.add("gone");
-    const hash = decodeURIComponent(location.hash.slice(1));
+    const destination = new URL(location.href).searchParams.get("destination") || "";
     const first = domains[Math.floor(Math.random() * domains.length)]; const G = galaxies[first];
     ship.position.copy(G.center).add(new THREE.Vector3(0.3, 0.25, 1).normalize().multiplyScalar(WORLD * 1.6));
-    if (hash.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === hash.slice(7)); if (k) return goDomain(k); }
-    if (hash.includes("/")) { const found = await findSlug(hash); if (found >= 0) return enterStar(found); }
+    if (destination.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === destination.slice(7)); if (k) return goDomain(k); }
+    if (destination.includes("/")) { const found = await findSlug(destination); if (found >= 0) return enterStar(found); }
     goDomain(first);
   }, 1400);
   async function findSlug(slug) {
