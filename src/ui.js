@@ -37,7 +37,13 @@ export const tag = {
 /* ---------- drawer ---------- */
 const drawer = $("drawer"), body = $("dr-body"), fig = $("fig");
 let current = null;
-export function closeDrawer() { current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); }
+drawer.inert = true;
+export function closeDrawer() {
+  const wasOpen = drawer.classList.contains("open");
+  current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); drawer.inert = true;
+  document.body.classList.remove("details-open");
+  if (wasOpen && !document.getElementById("gallery").hidden) document.getElementById("gallery-details").focus();
+}
 export function openDrawer(star) {
   // star: { slug, galaxy, lastmod, cover }
   current = star; const { slug } = star;
@@ -50,7 +56,8 @@ export function openDrawer(star) {
   $("split").innerHTML = ""; $("splitl").innerHTML = "";
   $("facts").innerHTML = [["Galaxy", star.galaxy === "Uncharted" ? "Interstellar (unclassified)" : star.galaxy], ["Updated", monthName(star.lastmod)], ["Workspace", slug.split("/")[0]], ["Project", slug.split("/")[1]]].map(([k, v]) => `<b>${k}</b><span>${esc(v)}</span>`).join("");
   $("dr-note").textContent = "";
-  drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); body.scrollTop = 0;
+  drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); drawer.inert = false; body.scrollTop = 0;
+  document.body.classList.add("details-open"); $("dr-close").focus();
 
   imageryFor(slug).then(im => {
     if (current !== star) return;
@@ -79,4 +86,4 @@ export function openDrawer(star) {
   });
 }
 function setFigure(src, cap) { const img = $("dr-img"); img.style.opacity = src ? 1 : 0; img.src = src; $("cap").textContent = cap || ""; $("cap").style.display = cap ? "" : "none"; }
-$("dr-close").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));
+$("dr-close").addEventListener("click", closeDrawer);

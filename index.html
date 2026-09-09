@@ -60,6 +60,37 @@
 
   <div class="tag" id="tag"></div>
 
+  <div class="cinema-frame" aria-hidden="true"></div>
+  <div id="arrival" class="arrival" role="status" aria-live="polite">
+    <span id="arrival-context"></span>
+    <h2 id="arrival-title"></h2>
+    <p id="arrival-caption"></p>
+  </div>
+
+  <section id="gallery" class="orbit-controls" aria-label="Dataset image gallery" hidden>
+    <div class="orbit-heading"><span id="gallery-sector"></span><h2 id="gallery-name"></h2></div>
+    <p id="gallery-status" role="status"></p>
+    <div id="gallery-index" class="orbit-index" aria-label="Choose an image"></div>
+    <div class="orbit-actions">
+      <button id="gallery-view" class="orbit-primary">View images <span aria-hidden="true">↗</span></button>
+      <button id="gallery-details">Dataset details</button>
+      <button id="gallery-leave" aria-label="Leave dataset">Leave <span aria-hidden="true">↗</span></button>
+    </div>
+  </section>
+
+  <dialog id="image-viewer" class="image-viewer" aria-labelledby="viewer-title">
+    <header class="viewer-header">
+      <div><span id="viewer-context"></span><h2 id="viewer-title"></h2></div>
+      <button id="viewer-close" aria-label="Close image viewer">Back to orbit <span aria-hidden="true">✕</span></button>
+    </header>
+    <div id="viewer-stage" class="viewer-stage"></div>
+    <footer class="viewer-footer">
+      <p id="viewer-status" role="status"></p>
+      <div class="viewer-navigation"><button id="viewer-prev" aria-label="Previous image">←</button><span id="viewer-count" aria-live="polite"></span><button id="viewer-next" aria-label="Next image">→</button></div>
+      <span class="viewer-hint">← → to explore · Esc to return</span>
+    </footer>
+  </dialog>
+
   <aside class="drawer" id="drawer" aria-hidden="true">
     <div class="top"><span id="dr-dom">—</span><button id="dr-close" aria-label="Close">close ✕</button></div>
     <div class="body" id="dr-body">
@@ -96,7 +127,9 @@
       <div class="keysg">
         <div><kbd>wasd</kbd> move · <kbd>q</kbd><kbd>e</kbd> spin · hold <kbd>shift</kbd> for turbo</div>
         <div><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
-        <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search · <kbd>esc</kbd> release</div>
+        <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search</div>
+        <div>Select an orbiting image to inspect · <kbd>←</kbd><kbd>→</kbd> browse images</div>
+        <div><kbd>esc</kbd> closes the viewer, then details, then leaves the dataset</div>
       </div>
       <div class="row">
         <button class="go-btn" id="g-jump">Jump somewhere random</button>
