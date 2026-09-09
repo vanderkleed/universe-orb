@@ -8,8 +8,6 @@ import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
 import { thumbUrl } from "./data.js";
-import { createOrbitGallery } from "./orbit-gallery.js";
-import { createImageViewer } from "./image-viewer.js";
 
 const $ = id => document.getElementById(id);
 function setDestination(destination) {
@@ -104,13 +102,6 @@ async function boot() {
   /* ---------- focus ---------- */
   // A "star" record: { index (global star index), slug, galaxy, j, lastmod, cover, item (planet item or null) }
   let focus = null, activeDom = null, selection = 0, destination = null, arrivalTimer = null;
-  const viewer = createImageViewer(() => {
-    Object.keys(keys).forEach(k => keys[k] = 0);
-    dragging = false; canvas.classList.remove("dragging"); tag.hide();
-  });
-  const gallery = createOrbitGallery(scene, camera, reduce, viewer, () => {
-    if (focus) { Object.keys(keys).forEach(k => keys[k] = 0); openDrawer(focus); }
-  }, () => release(true));
   function beginArrival(title, context, caption) {
     clearTimeout(arrivalTimer);
     destination = { title, context, caption };
@@ -126,7 +117,7 @@ async function boot() {
     document.body.classList.remove("in-transit");
     document.body.classList.add("arrived");
     $("arrival").classList.add("show");
-    if (focus) gallery.arrive();
+    if (focus) openDrawer(focus);
     arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 4200);
     destination = null;
   }
@@ -134,7 +125,7 @@ async function boot() {
     selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
     destination = null; clearTimeout(arrivalTimer); $("arrival").classList.remove("show");
     document.body.classList.remove("in-transit", "arrived");
-    gallery.clear(); closeDrawer();
+    closeDrawer();
     if (focus && closeToo) audio.play.close();
     focus = null; reticle.material.opacity = 0;
   }
@@ -157,7 +148,6 @@ async function boot() {
     const star = starRecord(index); if (!star.slug) return;
     focus = star; activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
     beginArrival(prettyName(star.slug), `${galaxy} / dataset discovered`, "Every image has a world inside it.");
-    gallery.prepare(star);
     flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
     tag.hide(); audio.play.select();
@@ -282,7 +272,7 @@ async function boot() {
     if (moved > 6) { canvas.classList.add("dragging"); if (auto || focus) release(); steer(-dx * 0.0038, dy * 0.0032); }
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
-  canvas.addEventListener("pointerleave", () => { mouse.set(10, 10); gallery.hover(-1); tag.hide(); });
+  canvas.addEventListener("pointerleave", () => { mouse.set(10, 10); tag.hide(); });
   canvas.addEventListener("pointercancel", () => { dragging = false; canvas.classList.remove("dragging"); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
   // WASD moves the ship in its own frame: W thrust, S reverse, A/D slide left and right; Q/E spin about the
@@ -290,10 +280,7 @@ async function boot() {
   const keys = { w: 0, s: 0, a: 0, d: 0, l: 0, r: 0, q: 0, e: 0, boost: 0 };
   const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", d: "d", arrowleft: "l", arrowright: "r", q: "q", e: "e" };
   addEventListener("keydown", e => {
-    if (viewer.open) return;
-    if (e.key === "Escape" && $("drawer").classList.contains("open")) { closeDrawer(); return; }
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-    if ($("drawer").classList.contains("open")) return;
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
@@ -305,8 +292,6 @@ async function boot() {
   const ray = new THREE.Raycaster();
   function clickAt(x, y) {
     const nd = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(nd, camera);
-    const image = gallery.intersect(ray); if (image >= 0) { gallery.inspect(image); return; }
-    if (focus && !auto) return;
     const hits = ray.intersectObjects(planets.active(), false); if (hits.length) { enterPlanet(hits[0].object.userData.item); return; }
     const camP = camera.getWorldPosition(tmp2); let best = -1, bd = 0.018;
     for (const [i, dist] of stars.near(ship.position, 90)) { stars.positionOf(i, v3).sub(camP); const len = v3.length(); const ang = Math.acos(Math.max(-1, Math.min(1, v3.dot(ray.ray.direction) / len))); const w = ang * Math.sqrt(len / 30); if (w < bd) { bd = w; best = i; } }
@@ -319,11 +304,8 @@ async function boot() {
   /* ---------- hover + scanner ---------- */
   let hot = null, hotStar = -1;
   function hover() {
-    if (dragging || viewer.open) return;
+    if (dragging) return;
     ray.setFromCamera(mouse, camera);
-    const image = gallery.intersect(ray); gallery.hover(image);
-    if (image >= 0) { canvas.classList.add("hot"); tag.show(`Inspect image ${String(image + 1).padStart(2, "0")}`, mx, my); return; }
-    if (focus && !auto) { tag.hide(); canvas.classList.remove("hot"); return; }
     const hits = ray.intersectObjects(planets.active(), false); const h = hits.length ? hits[0].object : null;
     if (h !== hot) { hot = h; if (h) audio.play.tick(); if (h && (!focus || h.userData.item !== focus.item)) { const it = h.userData.item; tag.show(`${esc(prettyName(it.slug))}<small>${esc(it.dom)}</small>`, mx, my); } else if (hotStar < 0) tag.hide(); }
     if (h && (!focus || h.userData.item !== focus.item)) tag.move(mx, my);
@@ -401,7 +383,7 @@ async function boot() {
   function loop() {
     requestAnimationFrame(loop); const dt = Math.min(clock.getDelta(), 0.05); t += dt; frame++;
     const T = now(); stars.tick(T);
-    // the focused star is orbiting: keep the autopilot target, reticle and constellation on it,
+    // the focused star is orbiting: keep the autopilot target and reticle on it,
     // and once holding, let the orbit carry the ship along with it
     if (focus) { prevStar.copy(focus.pos); starNow(focus.G, focus.j, T, focus.pos);
       if (auto) auto.target.copy(focus.pos);
@@ -429,28 +411,19 @@ async function boot() {
     if (Math.abs(strafe) > 0.01 && !warpPhase) { tmp.set(1, 0, 0).applyQuaternion(ship.quaternion); ship.position.addScaledVector(tmp, strafe * dt); }
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
-    if (focus && !auto) {
-      camera.lookAt(focus.pos);
-      camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * (innerWidth <= 720 ? 0.09 : 0.035), innerWidth, innerHeight);
-    } else if (camera.view?.enabled) camera.clearViewOffset();
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
     if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
     for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
-      const featured = focus && !auto && focus.item === it;
-      m.renderOrder = featured ? 11 : 0; m.material.depthTest = !featured;
       const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
-    gallery.update(dt);
     if (reticle.material.opacity > 0) { reticle.material.rotation = t * 0.6; const rd = reticle.position.distanceTo(camP); reticle.scale.setScalar(0.06 * rd + 0.6); }
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
-    if (frame % 2 === 0 && !(focus && !auto)) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
-    orb.visible = !(focus && !auto);
+    if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
     renderer.render(scene, camera);
     if (frame % 3 === 0) { placeLabels(); updateReadout(); }
-    if (focus) { slabels.forEach(el => el.style.opacity = 0); hotStar = -1; }
-    else if (frame % 4 === 1) scan();
+    if (frame % 4 === 1) scan();
   }
   loop();
 

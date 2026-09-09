@@ -38,11 +38,12 @@ export const tag = {
 const drawer = $("drawer"), body = $("dr-body"), fig = $("fig");
 let current = null;
 drawer.inert = true;
+$("gl").tabIndex = -1;
 export function closeDrawer() {
-  const wasOpen = drawer.classList.contains("open");
+  const hadFocus = drawer.contains(document.activeElement);
   current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); drawer.inert = true;
   document.body.classList.remove("details-open");
-  if (wasOpen && !document.getElementById("gallery").hidden) document.getElementById("gallery-details").focus();
+  if (hadFocus) $("gl").focus({ preventScroll: true });
 }
 export function openDrawer(star) {
   // star: { slug, galaxy, lastmod, cover }
@@ -86,4 +87,4 @@ export function openDrawer(star) {
   });
 }
 function setFigure(src, cap) { const img = $("dr-img"); img.style.opacity = src ? 1 : 0; img.src = src; $("cap").textContent = cap || ""; $("cap").style.display = cap ? "" : "none"; }
-$("dr-close").addEventListener("click", closeDrawer);
+$("dr-close").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));
