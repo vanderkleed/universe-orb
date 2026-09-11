@@ -62,6 +62,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   setTimeout(() => { skipEl.style.opacity = 1; }, 1400);
 
   function frame(now) {
+    clearTimeout(fallback); cancelAnimationFrame(raf);
     if (start === null) start = now;
     let t = (now - start) / 1000;
     if (skipped && t < T.warp) { start = now - T.warp * 1000; t = T.warp; skipped = false; }
@@ -113,9 +114,13 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
 
     if (t >= T.done && !doneFired) { doneFired = true; root.classList.add("out"); try { onDone(); } catch {} }
     if (t >= T.end + 0.2) { finished = true; cleanup(); return; }
-    raf = requestAnimationFrame(frame);
+    schedule();
   }
-  function cleanup() { cancelAnimationFrame(raf); removeEventListener("keydown", onKey); removeEventListener("resize", size); root.remove(); }
-  raf = requestAnimationFrame(frame);
+  // frames drive the sequence; a timer fallback keeps the clock moving in throttled or hidden tabs so
+  // nobody is ever parked on the overlay
+  let fallback = 0;
+  function schedule() { raf = requestAnimationFrame(frame); fallback = setTimeout(() => { cancelAnimationFrame(raf); frame(performance.now()); }, 120); }
+  function cleanup() { cancelAnimationFrame(raf); clearTimeout(fallback); removeEventListener("keydown", onKey); removeEventListener("resize", size); root.remove(); }
+  schedule();
   return { skip, destroy: () => { finished = true; cleanup(); if (!doneFired) { doneFired = true; onDone(); } } };
 }
