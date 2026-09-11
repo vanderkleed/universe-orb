@@ -1,4 +1,4 @@
-/* Universe Orb — Roboflow design system: Suisse Int'l, Geist Mono, 52px nav, #121110 / #F4F2EC. */
+/* Universe Orb — Roboflow design system: Suisse Int'l, Geist Mono, 52px nav, #000000 / #F4F2EC. */
 /* Suisse Int'l is licensed, so the woff2 files are not committed by machine — they are uploaded
    directly to /public/fonts (names below match the brand kit exactly). Fallback: Helvetica Neue. */
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlRegular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
@@ -6,7 +6,7 @@
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlMedium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlLight.woff2") format("woff2");font-weight:300;font-style:normal;font-display:swap}
 :root{
-    --ground:#121110; --ink:#F4F2EC; --mute:#8F8B83; --dim:#4D4A45;
+    --ground:#000000; --ink:#F4F2EC; --mute:#8F8B83; --dim:#4D4A45;
     --hair:rgba(244,242,236,.10); --grid:rgba(244,242,236,.03);
     --sans:"Suisse Intl",-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
     --mono:"Geist Mono","SFMono-Regular",Menlo,Consolas,monospace;
@@ -21,10 +21,10 @@
     background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
     background-size:64px 64px;background-position:center center;mix-blend-mode:screen}
   .vignette{position:fixed;inset:0;pointer-events:none;z-index:1;
-    background:radial-gradient(ellipse at 50% 55%,rgba(18,17,16,0) 40%,rgba(18,17,16,.6) 100%)}
+    background:radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 100%)}
   .flash{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(circle at 50% 50%,rgba(244,242,236,1) 0%,rgba(244,242,236,.35) 30%,rgba(244,242,236,0) 70%);opacity:0}
   nav{position:fixed;top:0;left:0;right:0;height:var(--nav);z-index:10;display:flex;align-items:center;justify-content:space-between;
-    padding:0 20px;border-bottom:1px solid var(--hair);background:linear-gradient(rgba(18,17,16,.85),rgba(18,17,16,.5));backdrop-filter:blur(6px)}
+    padding:0 20px;border-bottom:1px solid var(--hair);background:linear-gradient(rgba(0,0,0,.85),rgba(0,0,0,.5));backdrop-filter:blur(6px)}
   .wordmark{font-family:var(--sans);font-weight:500;font-size:18px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
   .wordmark small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
   .navr{display:flex;align-items:center;gap:22px}
@@ -59,7 +59,7 @@
   .tag{position:fixed;z-index:6;pointer-events:none;font-family:var(--sans);font-size:14px;color:var(--ink);opacity:0;transform:translate(14px,-50%);white-space:nowrap;transition:opacity .12s}
   .tag small{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-left:10px}
   /* drawer */
-  .drawer{position:fixed;top:var(--nav);right:0;bottom:0;width:min(460px,100vw);z-index:12;background:rgba(18,17,16,.9);backdrop-filter:blur(10px);border-left:1px solid var(--hair);
+  .drawer{position:fixed;top:var(--nav);right:0;bottom:0;width:min(460px,100vw);z-index:12;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);border-left:1px solid var(--hair);
     transform:translateX(102%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;overflow:hidden}
   .drawer.open{transform:none}
   .drawer .top{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
@@ -67,15 +67,15 @@
   .drawer .top button:hover,.drawer .top button:focus-visible{color:var(--ink);outline:none}
   .drawer .body>*{flex:none}
   .drawer .body{overflow:auto;padding:22px;display:flex;flex-direction:column;gap:20px;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
-  .figure{position:relative;aspect-ratio:4/3;background:#1B1A18;border:1px solid var(--hair);overflow:hidden}
+  .figure{position:relative;aspect-ratio:4/3;background:var(--ground);border:1px solid var(--hair);overflow:hidden}
   .figure img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
   .figure img.ann{opacity:0;transition:opacity .25s}
   .figure.show-ann img.ann{opacity:1}
   .figure .sw{position:absolute;left:10px;bottom:10px;display:flex;gap:1px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase}
-  .figure .sw button{all:unset;cursor:pointer;padding:6px 9px;background:rgba(18,17,16,.8);color:var(--mute);border:1px solid var(--hair)}
+  .figure .sw button{all:unset;cursor:pointer;padding:6px 9px;background:rgba(0,0,0,.8);color:var(--mute);border:1px solid var(--hair)}
   .figure .sw button.on{color:var(--ink);background:rgba(244,242,236,.08)}
   .figure .sw button:focus-visible{outline:1px solid var(--ink)}
-  .figure .cap{position:absolute;right:10px;bottom:10px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:rgba(18,17,16,.8);border:1px solid var(--hair);padding:6px 9px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .figure .cap{position:absolute;right:10px;bottom:10px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:rgba(0,0,0,.8);border:1px solid var(--hair);padding:6px 9px;max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .drawer h2{font-family:var(--sans);font-weight:500;font-size:27px;line-height:1.1;letter-spacing:-0.015em;margin:0;text-wrap:balance;overflow-wrap:anywhere}
   .drawer .by{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-top:8px;overflow-wrap:anywhere}
   .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair)}
@@ -86,7 +86,7 @@
   .lbl a{color:var(--mute);text-decoration:none}
   .lbl a:hover{color:var(--ink)}
   .samples{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-  .samples button{all:unset;cursor:pointer;aspect-ratio:4/3;background:#1B1A18;border:1px solid var(--hair);overflow:hidden;position:relative}
+  .samples button{all:unset;cursor:pointer;aspect-ratio:4/3;background:var(--ground);border:1px solid var(--hair);overflow:hidden;position:relative}
   .samples button img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85;transition:opacity .15s}
   .samples button:hover img,.samples button.on img{opacity:1}
   .samples button.on{border-color:var(--ink)}
@@ -114,7 +114,7 @@
   .intro p{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);margin:18px 0 0}
   .strip{display:none}
   @media (max-width:720px){
-    .strip{position:fixed;left:0;right:0;bottom:0;z-index:11;display:flex;gap:6px;overflow-x:auto;padding:10px 12px 14px;background:linear-gradient(transparent,rgba(18,17,16,.9) 40%);scrollbar-width:none}
+    .strip{position:fixed;left:0;right:0;bottom:0;z-index:11;display:flex;gap:6px;overflow-x:auto;padding:10px 12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.9) 40%);scrollbar-width:none}
     .strip button{all:unset;flex:0 0 auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);border:1px solid var(--hair);padding:7px 10px;cursor:pointer}
     .strip button.on{color:var(--ink);border-color:var(--ink)}
     .readout{bottom:64px;max-width:64vw}.inst{bottom:64px}
@@ -131,13 +131,13 @@
   .search input::-webkit-search-cancel-button{display:none}
   .search kbd{font-family:var(--mono);color:var(--dim);border:1px solid var(--hair);padding:0 5px;font-size:9px}
   .search:focus-within kbd{display:none}
-  .results{position:absolute;top:calc(100% + 8px);right:0;width:min(420px,calc(100vw - 40px));background:rgba(18,17,16,.94);backdrop-filter:blur(10px);border:1px solid var(--hair);display:none;flex-direction:column;max-height:min(60vh,520px);overflow:auto;z-index:20;scrollbar-width:thin}
+  .results{position:absolute;top:calc(100% + 8px);right:0;width:min(420px,calc(100vw - 40px));background:rgba(0,0,0,.94);backdrop-filter:blur(10px);border:1px solid var(--hair);display:none;flex-direction:column;max-height:min(60vh,520px);overflow:auto;z-index:20;scrollbar-width:thin}
   .results.open{display:flex}
   .results .meta{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:10px 14px;border-bottom:1px solid var(--hair)}
   .results button{all:unset;cursor:pointer;display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--hair)}
   .results button:last-child{border-bottom:0}
   .results button:hover,.results button.on{background:rgba(244,242,236,.06)}
-  .results .pl{width:40px;height:40px;border-radius:50%;background:#1B1A18;border:1px solid var(--hair);overflow:hidden}
+  .results .pl{width:40px;height:40px;border-radius:50%;background:var(--ground);border:1px solid var(--hair);overflow:hidden}
   .results .pl img{width:100%;height:100%;object-fit:cover;display:block}
   .results .pl.empty{background:radial-gradient(circle,rgba(244,242,236,.35) 0,rgba(244,242,236,0) 60%)}
   .results .nm{font-family:var(--sans);font-size:14px;font-weight:500;color:var(--ink);line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -154,7 +154,7 @@
   #help{padding:8px 11px}
   .guide{position:fixed;inset:0;z-index:18;display:flex;align-items:center;justify-content:center;pointer-events:none}
   .guide[hidden]{display:none}
-  .guide .card{pointer-events:auto;width:min(460px,calc(100vw - 40px));background:rgba(18,17,16,.92);backdrop-filter:blur(10px);border:1px solid var(--hair);padding:26px 28px;animation:guidein .5s cubic-bezier(.2,.8,.2,1)}
+  .guide .card{pointer-events:auto;width:min(460px,calc(100vw - 40px));background:rgba(0,0,0,.92);backdrop-filter:blur(10px);border:1px solid var(--hair);padding:26px 28px;animation:guidein .5s cubic-bezier(.2,.8,.2,1)}
   @keyframes guidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .guide h2{font-family:var(--sans);font-weight:500;font-size:23px;letter-spacing:-0.015em;margin:0 0 10px}
   .guide p{font-family:var(--sans);font-size:14px;line-height:1.55;color:var(--mute);margin:0 0 16px}
@@ -165,7 +165,7 @@
   .guide .go-btn:hover,.guide .go-btn:focus-visible{outline:none;box-shadow:0 0 0 1px var(--ink)}
   .guide .quiet{all:unset;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding:10px 4px}
   .guide .quiet:hover,.guide .quiet:focus-visible{color:var(--ink);outline:none}
-  .hint{position:fixed;left:50%;bottom:96px;transform:translate(-50%,8px);z-index:14;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:rgba(18,17,16,.9);border:1px solid var(--hair);padding:10px 14px;opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;white-space:nowrap;max-width:90vw}
+  .hint{position:fixed;left:50%;bottom:96px;transform:translate(-50%,8px);z-index:14;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:rgba(0,0,0,.9);border:1px solid var(--hair);padding:10px 14px;opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;white-space:nowrap;max-width:90vw}
   .hint.show{opacity:1;transform:translate(-50%,0)}
   .hint kbd{font-family:inherit;border:1px solid var(--hair);padding:0 4px}
   @media (max-width:720px){.hint{white-space:normal;text-align:center}.guide .keysg div:first-child{display:none}}
@@ -177,15 +177,21 @@
 
 /* Arrival framing stays quiet so the real dataset imagery leads. */
 html{background:var(--ground)}
-.cinema-frame{position:fixed;inset:var(--nav) 0 0;z-index:7;pointer-events:none;box-shadow:inset 0 0 0 var(--ground);transition:box-shadow 1.2s cubic-bezier(.2,.8,.2,1)}
+.cinema-frame{position:fixed;inset:0;z-index:7;pointer-events:none;box-shadow:inset 0 0 0 var(--ground);transition:box-shadow 1.2s cubic-bezier(.2,.8,.2,1)}
 .in-transit .cinema-frame{box-shadow:inset 0 5vh 0 var(--ground),inset 0 -7vh 0 var(--ground)}
 .arrival{position:fixed;top:calc(var(--nav) + 48px);left:50%;width:min(600px,70vw);transform:translate(-50%,12px);text-align:center;z-index:9;opacity:0;pointer-events:none;transition:opacity 1s,transform 1s}
 .arrival.show{opacity:1;transform:translate(-50%,0)}
 .arrival span{font:14px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .arrival h2{font:400 clamp(32px,5vw,60px)/1.05 var(--sans);letter-spacing:-.035em;text-wrap:balance;overflow-wrap:anywhere;margin:16px 0}
 .arrival p{font:14px/1.5 var(--sans);color:var(--mute);margin:0}
-/* Visibility also suppresses keyboard focus and labels whose opacity is updated each frame. */
+/* A separate reveal channel preserves the per-frame opacity of projected labels and tooltips. */
+@property --ui-reveal{syntax:"<number>";inherits:true;initial-value:1}
+body{--ui-reveal:1;transition:--ui-reveal 2.6s cubic-bezier(.22,.61,.36,1) .35s}
+body.in-transit{--ui-reveal:0;transition:none}
+:is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){filter:opacity(var(--ui-reveal))}
+/* Visibility suppresses keyboard focus throughout travel; the reveal starts only on arrival. */
 .in-transit :is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){visibility:hidden;pointer-events:none}
+@media(prefers-reduced-motion:reduce){body{transition:none}}
 @media(max-width:1100px){.wordmark small{display:none}.navr{gap:12px}}
 @media(max-width:720px){
   nav{padding:0 12px}.wordmark{font-size:16px}.navr{gap:8px;margin-left:12px}#snd{display:none}#rnd{font-size:0;padding:8px}#rnd::after{content:"Jump";font-size:10px}

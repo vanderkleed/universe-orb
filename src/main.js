@@ -33,8 +33,8 @@ async function boot() {
   /* ---------- renderer ---------- */
   const canvas = $("gl");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x121110, 1); renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x121110, FOG);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x000000, 1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x000000, FOG);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 2000);
   const ship = new THREE.Object3D(); scene.add(ship);
   const camRig = new THREE.Object3D(); ship.add(camRig); camRig.add(camera);
@@ -121,7 +121,7 @@ async function boot() {
     document.body.classList.add("arrived");
     $("arrival").classList.add("show");
     if (focus) openDrawer(focus);
-    arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 4200);
+    arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 6800);
     destination = null;
   }
   function release(closeToo) {

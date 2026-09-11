@@ -3,16 +3,16 @@
 //   import { playIntro } from "./intro.js";
 //   playIntro({ total: 330601, galaxies: 18, onDone: () => startArrivalFlight() });
 //
-// Mounts a full-screen overlay above whatever is underneath, plays a ~5s sequence, then dissolves.
-// onDone fires as the dissolve starts (~4.6s) so the arrival flight can begin underneath it.
+// Mounts a full-screen overlay above whatever is underneath, holds the title, then dissolves.
+// onDone fires as the dissolve starts (~6.2s) so the arrival flight can begin underneath it.
 // Click or any key skips. prefers-reduced-motion gets a quiet title fade. Plays the full sequence on
-// a visitor's first visit and a short 2s title-only version afterwards (localStorage) — pass
+// a visitor's first visit and a short title-only version afterwards (localStorage) — pass
 // { force: true } to always play it in full.
 //
 // React:  useEffect(() => { playIntro({ total, galaxies, onDone }); }, []);
 
 const CSS = `
-.uo-intro{position:fixed;inset:0;z-index:1000;background:#121110;overflow:hidden;cursor:default;transition:opacity 1.1s ease}
+.uo-intro{position:fixed;inset:0;z-index:1000;background:#000000;overflow:hidden;cursor:default;transition:opacity 1.1s ease}
 .uo-intro.out{opacity:0;pointer-events:none}
 .uo-intro canvas{position:absolute;inset:0;width:100%;height:100%}
 .uo-intro .t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;color:#F4F2EC}
@@ -42,8 +42,8 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
 
   // timeline (seconds)
   const T = short
-    ? { dot: 0, countStart: 0, countEnd: 0, title: 0.1, titleIn: 0.9, warp: 1.5, done: 1.5, end: 2.6 }
-    : { dot: 0.2, countStart: 0.9, countEnd: 3.3, title: 3.45, titleIn: 1.0, warp: 4.5, done: 4.65, end: 5.9 };
+    ? { dot: 0, countStart: 0, countEnd: 0, title: 0.1, titleIn: 0.9, warp: 2.6, done: 2.6, end: 3.7 }
+    : { dot: 0.2, countStart: 0.9, countEnd: 3.3, title: 3.45, titleIn: 1.0, warp: 6.05, done: 6.2, end: 7.45 };
 
   let W = 0, H = 0, dpr = 1;
   function size() { dpr = Math.min(devicePixelRatio || 1, 2); W = root.clientWidth; H = root.clientHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
@@ -77,7 +77,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
     if (!short) { const want = Math.min(MAXDOTS, Math.floor(Math.pow(count / total, 0.8) * MAXDOTS)); while (dots.length < want) spawn(t); }
     else if (!dots.length) { for (let i = 0; i < 900; i++) spawn(-2); }
 
-    ctx.fillStyle = "#121110"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#000000"; ctx.fillRect(0, 0, W, H);
     // vignette-ish glow at centre while the field forms
     const glow = (1 - warpK) * (0.05 + 0.08 * countK);
     const rg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.min(W, H) * 0.42);
