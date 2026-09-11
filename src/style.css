@@ -4,6 +4,7 @@
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlRegular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlRegularIt.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
 @font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlMedium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:"Suisse Intl";src:url("/fonts/SuisseIntlLight.woff2") format("woff2");font-weight:300;font-style:normal;font-display:swap}
 :root{
     --ground:#121110; --ink:#F4F2EC; --mute:#8F8B83; --dim:#4D4A45;
     --hair:rgba(244,242,236,.10); --grid:rgba(244,242,236,.03);
