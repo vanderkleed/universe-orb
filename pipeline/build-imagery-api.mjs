@@ -17,6 +17,9 @@ const KEY = process.env.ROBOFLOW_API_KEY;
 const BATCH = +(process.env.BATCH || 15000);
 const RATE = +(process.env.RATE || 4);
 const SHARDS = 64;
+// parallel harvest: PARTS workers each take the slugs whose shard index ≡ PART (mod PARTS), and with
+// PART_OUT set write only those shards there (a later merge step folds them back into the repo)
+const PARTS = +(process.env.PARTS || 1), PART = +(process.env.PART || 0), PART_OUT = process.env.PART_OUT || "";
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const shardOf = slug => { let h = 0; for (const ch of slug) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % SHARDS; };
 
@@ -38,7 +41,7 @@ async function main() {
   const manifest = await readJSON(path.join(OUT, "manifest.json"));
   if (!manifest) throw new Error("run build-index.mjs first");
   const all = [];
-  for (const g of Object.values(manifest.galaxies)) for (const f of g.shards) all.push(...(await readJSON(path.join(OUT, f), [])));
+  for (const g of Object.values(manifest.galaxies)) for (const f of g.shards) for (const e of await readJSON(path.join(OUT, f), [])) if (PARTS === 1 || shardOf(e[0]) % PARTS === PART) all.push(e);
   await fs.mkdir(path.join(OUT, "imagery"), { recursive: true });
   const shards = [];
   for (let i = 0; i < SHARDS; i++) shards.push(await readJSON(path.join(OUT, `imagery/${i}.json`), {}));
@@ -80,7 +83,8 @@ async function main() {
   await Promise.all(workers);
 
   let covers = 0;
-  for (let i = 0; i < SHARDS; i++) { await fs.writeFile(path.join(OUT, `imagery/${i}.json`), JSON.stringify(shards[i])); for (const v of Object.values(shards[i])) if (v.c) covers++; }
+  const dest = PART_OUT ? PART_OUT : path.join(OUT, "imagery"); await fs.mkdir(dest, { recursive: true });
+  for (let i = 0; i < SHARDS; i++) { if (PARTS > 1 && i % PARTS !== PART) continue; await fs.writeFile(path.join(dest, `${i}.json`), JSON.stringify(shards[i])); for (const v of Object.values(shards[i])) if (v.c) covers++; }
   console.log(`imagery shards written: ${covers} datasets with a cover (${ok} updated, ${miss} without icons, ${err} HTTP errors${firstErr ? ", first: " + firstErr : ""}).`);
   if (done > 100 && ok === 0 && err > done * 0.9) { console.error("the API refused nearly every request — check the key"); process.exit(1); }
 }

@@ -8,6 +8,7 @@ import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
 import { thumbUrl } from "./data.js";
+import { playIntro } from "./intro.js";
 
 const $ = id => document.getElementById(id);
 function setDestination(destination) {
@@ -22,7 +23,9 @@ const audio = createAudio();
 
 async function boot() {
   const manifest = await loadManifest();
-  $("intro-p").textContent = `Charting ${fmt(manifest.total)} datasets`;
+  $("intro").classList.add("gone");
+  // the title sequence plays over the loading and the build; arrival waits for it to hand off
+  const introDone = new Promise(res => playIntro({ total: manifest.total, galaxies: Object.keys(manifest.galaxies).filter(k => k !== "Uncharted").length, onDone: res }));
   const imagery = await loadImagery();
   const layout = buildLayout(manifest);
   const { domains, galaxies } = layout;
@@ -258,7 +261,7 @@ async function boot() {
   $("g-close").addEventListener("click", closeGuide);
   $("g-jump").addEventListener("click", () => { closeGuide(); randomJump(); });
   // first visit: the guide comes up once the arrival flight has begun
-  if (!seen.has("guide")) setTimeout(openGuide, 3200);
+  if (!seen.has("guide")) introDone.then(() => setTimeout(openGuide, 2600));
   // gentle nudges, each shown once, spaced out
   let arrivals = 0, searched = false;
   setTimeout(() => { if (!searched) hintOnce("h-search", `<kbd>/</kbd> search all ${fmt(manifest.total)} datasets`); }, 75000);
@@ -428,8 +431,7 @@ async function boot() {
   loop();
 
   // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL)
-  setTimeout(async () => {
-    $("intro").classList.add("gone");
+  introDone.then(async () => {
     if (selection > 0) return;
     const startingSelection = selection;
     const destination = new URL(location.href).searchParams.get("destination") || "";
@@ -438,7 +440,7 @@ async function boot() {
     if (destination.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === destination.slice(7)); if (k) return goDomain(k); }
     if (destination.includes("/")) { const found = await findSlug(destination); if (selection !== startingSelection) return; if (found >= 0) return enterStar(found); }
     goDomain(first);
-  }, 1400);
+  });
   async function findSlug(slug) {
     const planet = planets.bySlug.get(slug);
     if (planet) return stars.start[planet.dom] + planet.j;
