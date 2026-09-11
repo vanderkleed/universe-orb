@@ -8,6 +8,7 @@ import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING, SHADE, dither } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
 import { thumbUrl, imageryFor } from "./data.js";
+import { playIntro } from "./intro.js";
 
 const $ = id => document.getElementById(id);
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -16,7 +17,9 @@ const audio = createAudio();
 
 async function boot() {
   const manifest = await loadManifest();
-  $("intro-p").textContent = `Charting ${fmt(manifest.total)} datasets`;
+  $("intro").classList.add("gone");
+  // the title sequence plays over the loading and the build; arrival waits for it to hand off
+  const introDone = new Promise(res => playIntro({ total: manifest.total, galaxies: Object.keys(manifest.galaxies).filter(k => k !== "Uncharted").length, onDone: res }));
   const imagery = await loadImagery();
   const layout = buildLayout(manifest);
   const { domains, galaxies } = layout;
@@ -236,7 +239,7 @@ async function boot() {
   $("g-close").addEventListener("click", closeGuide);
   $("g-jump").addEventListener("click", () => { closeGuide(); randomJump(); });
   // first visit: the guide comes up once the arrival flight has begun
-  if (!seen.has("guide")) setTimeout(openGuide, 3200);
+  if (!seen.has("guide")) introDone.then(() => setTimeout(openGuide, 2600));
   // gentle nudges, each shown once, spaced out
   let arrivals = 0, searched = false;
   setTimeout(() => { if (!searched) hintOnce("h-search", `<kbd>/</kbd> search all ${fmt(manifest.total)} datasets`); }, 75000);
@@ -403,15 +406,14 @@ async function boot() {
   loop();
 
   // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL hash)
-  setTimeout(async () => {
-    $("intro").classList.add("gone");
+  introDone.then(async () => {
     const hash = decodeURIComponent(location.hash.slice(1));
     const first = domains[Math.floor(Math.random() * domains.length)]; const G = galaxies[first];
     ship.position.copy(G.center).add(new THREE.Vector3(0.3, 0.25, 1).normalize().multiplyScalar(WORLD * 1.6));
     if (hash.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === hash.slice(7)); if (k) return goDomain(k); }
     if (hash.includes("/")) { const found = await findSlug(hash); if (found >= 0) return enterStar(found); }
     goDomain(first);
-  }, 1400);
+  });
   async function findSlug(slug) {
     // search shards for a slug (loads at most all shards once; used only for deep links)
     for (const k of [...domains, "Uncharted"]) { const lists = await galaxyShards(manifest, k); let j = 0; for (const list of lists) { for (const e of list) { if (e[0] === slug) return stars.start[k] + j; j++; } } }
