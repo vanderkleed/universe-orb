@@ -174,3 +174,21 @@
   .epoch.on{opacity:1}
   .epoch .d{font-family:var(--sans);font-weight:500;font-size:30px;letter-spacing:-0.015em;color:var(--ink)}
   .epoch .c{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-top:9px}
+
+/* Arrival framing stays quiet so the real dataset imagery leads. */
+html{background:var(--ground)}
+.cinema-frame{position:fixed;inset:var(--nav) 0 0;z-index:7;pointer-events:none;box-shadow:inset 0 0 0 var(--ground);transition:box-shadow 1.2s cubic-bezier(.2,.8,.2,1)}
+.in-transit .cinema-frame{box-shadow:inset 0 5vh 0 var(--ground),inset 0 -7vh 0 var(--ground)}
+.arrival{position:fixed;top:calc(var(--nav) + 48px);left:50%;width:min(600px,70vw);transform:translate(-50%,12px);text-align:center;z-index:9;opacity:0;pointer-events:none;transition:opacity 1s,transform 1s}
+.arrival.show{opacity:1;transform:translate(-50%,0)}
+.arrival span{font:14px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.arrival h2{font:400 clamp(32px,5vw,60px)/1.05 var(--sans);letter-spacing:-.035em;text-wrap:balance;overflow-wrap:anywhere;margin:16px 0}
+.arrival p{font:14px/1.5 var(--sans);color:var(--mute);margin:0}
+.in-transit .rail,.in-transit .inst,.in-transit .dlabel{opacity:.2;transition:opacity .8s}
+@media(max-width:1100px){.wordmark small{display:none}.navr{gap:12px}}
+@media(max-width:720px){
+  nav{padding:0 12px}.wordmark{font-size:16px}.navr{gap:8px;margin-left:12px}#snd{display:none}#rnd{font-size:0;padding:8px}#rnd::after{content:"Jump";font-size:10px}
+  .arrival{top:calc(var(--nav) + 28px);width:calc(100vw - 40px)}.arrival h2{font-size:32px}.arrival span{font-size:14px;letter-spacing:.04em}
+}
+@media(max-height:760px) and (min-width:721px){.arrival{top:calc(var(--nav) + 18px)}.arrival h2{font-size:36px}}
+@media(prefers-reduced-motion:reduce){.cinema-frame{display:none}.arrival{animation:none;transition:none}.flash{display:none}}

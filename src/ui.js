@@ -37,7 +37,14 @@ export const tag = {
 /* ---------- drawer ---------- */
 const drawer = $("drawer"), body = $("dr-body"), fig = $("fig");
 let current = null;
-export function closeDrawer() { current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); }
+drawer.inert = true;
+$("gl").tabIndex = -1;
+export function closeDrawer() {
+  const hadFocus = drawer.contains(document.activeElement);
+  current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); drawer.inert = true;
+  document.body.classList.remove("details-open");
+  if (hadFocus) $("gl").focus({ preventScroll: true });
+}
 export function openDrawer(star) {
   // star: { slug, galaxy, lastmod, cover }
   current = star; const { slug } = star;
@@ -50,7 +57,8 @@ export function openDrawer(star) {
   $("split").innerHTML = ""; $("splitl").innerHTML = "";
   $("facts").innerHTML = [["Galaxy", star.galaxy === "Uncharted" ? "Interstellar (unclassified)" : star.galaxy], ["Updated", monthName(star.lastmod)], ["Workspace", slug.split("/")[0]], ["Project", slug.split("/")[1]]].map(([k, v]) => `<b>${k}</b><span>${esc(v)}</span>`).join("");
   $("dr-note").textContent = "";
-  drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); body.scrollTop = 0;
+  drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); drawer.inert = false; body.scrollTop = 0;
+  document.body.classList.add("details-open"); $("dr-close").focus();
 
   imageryFor(slug).then(im => {
     if (current !== star) return;

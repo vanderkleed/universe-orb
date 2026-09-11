@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // Normalize legacy routes before preview tooling treats the hash as a CSS selector.
+    if (location.hash) {
+      const url = new URL(location.href);
+      let destination = url.hash.slice(1);
+      try { destination = decodeURIComponent(destination); } catch {}
+      if (destination.includes("/")) {
+        url.searchParams.set("destination", destination);
+        url.hash = "";
+        history.replaceState(history.state, "", url);
+      }
+    }
+  </script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Universe · Roboflow explorer</title>
   <meta name="description" content="Fly a mirrored orb through every public dataset on Roboflow Universe.">
@@ -47,6 +60,13 @@
 
   <div class="tag" id="tag"></div>
 
+  <div class="cinema-frame" aria-hidden="true"></div>
+  <div id="arrival" class="arrival" role="status" aria-live="polite">
+    <span id="arrival-context"></span>
+    <h2 id="arrival-title"></h2>
+    <p id="arrival-caption"></p>
+  </div>
+
   <aside class="drawer" id="drawer" aria-hidden="true">
     <div class="top"><span id="dr-dom">—</span><button id="dr-close" aria-label="Close">close ✕</button></div>
     <div class="body" id="dr-body">
@@ -83,7 +103,9 @@
       <div class="keysg">
         <div><kbd>wasd</kbd> move · <kbd>q</kbd><kbd>e</kbd> spin · hold <kbd>shift</kbd> for turbo</div>
         <div><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
-        <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search · <kbd>esc</kbd> release</div>
+        <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search</div>
+        <div>Dataset details and samples appear when you arrive</div>
+        <div><kbd>esc</kbd> closes details and returns to free flight</div>
       </div>
       <div class="row">
         <button class="go-btn" id="g-jump">Jump somewhere random</button>

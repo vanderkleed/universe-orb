@@ -5,12 +5,18 @@ import { buildLayout, buildStars, starNow, now, WORLD, FOG } from "./universe.js
 import { createSearch } from "./search.js";
 import { createAudio } from "./audio.js";
 import { buildPlanets } from "./planets.js";
-import { HAZE, DOT, RING, SHADE, dither } from "./textures.js";
+import { HAZE, DOT, RING } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
-import { thumbUrl, imageryFor } from "./data.js";
+import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
 
 const $ = id => document.getElementById(id);
+function setDestination(destination) {
+  const url = new URL(location.href);
+  url.searchParams.set("destination", destination);
+  url.hash = "";
+  history.replaceState(history.state, "", url);
+}
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const audio = createAudio();
 { const b = $("snd"); const label = on => { b.innerHTML = `Sound ${on ? "on" : "off"} <kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
@@ -74,7 +80,12 @@ async function boot() {
   function flyTo(P, standoff) {
     auto = { target: P.clone(), standoff }; tCamDist = 6.5;
     const dist = P.distanceTo(ship.position);
-    if (dist > JUMP && reduce) jumpNear(P, standoff);
+    if (reduce) {
+      jumpNear(P, standoff);
+      const direction = P.clone().sub(ship.position).normalize();
+      ship.position.copy(P).addScaledVector(direction, -standoff);
+      roll = tRoll = 0; camDist = tCamDist = 6.5; speed = 0;
+    }
     else if (dist > JUMP) { if (!warpPhase) hyperspace(P, standoff); else pendingWarp = { P: P.clone(), standoff }; }
   }
   function jumpNear(P, standoff) { tmp.copy(P).sub(ship.position).normalize(); ship.position.copy(P).sub(tmp.multiplyScalar(standoff + 14)); const h = headingTo(tmp2.copy(P).sub(ship.position)); yaw = tYaw = h.yaw; pitch = tPitch = h.pitch; }
@@ -88,30 +99,39 @@ async function boot() {
       warp = Math.pow(Math.sin(p * Math.PI), 0.55);
       if (p >= 1) { warpPhase = null; warp = 0; if (pendingWarp) { const q = pendingWarp; pendingWarp = null; if (auto) hyperspace(q.P, q.standoff); } }
     }
-    $("flash").style.opacity = Math.pow(warp, 4) * 0.5; camera.fov = 52 + warp * 40; camera.updateProjectionMatrix(); stars.mat.uniforms.warpK.value = warp;
+    $("flash").style.opacity = reduce ? 0 : Math.pow(warp, 4) * 0.16; camera.fov = 52 + (reduce ? 0 : warp * 24); camera.updateProjectionMatrix(); stars.mat.uniforms.warpK.value = warp;
   }
 
   /* ---------- focus ---------- */
   // A "star" record: { index (global star index), slug, galaxy, j, lastmod, cover, item (planet item or null) }
-  let focus = null, activeDom = null;
-  const constel = new THREE.Group(); scene.add(constel); let constelT = 0;
-  const circleGeo = new THREE.CircleGeometry(0.5, 56), edgeGeo = new THREE.EdgesGeometry(circleGeo);
-  function clearConstellation() { while (constel.children.length) { const c = constel.children.pop(); c.material.dispose(); } }
-  async function showConstellation(star) {
-    clearConstellation(); const im = await imageryFor(star.slug); if (!im || focus !== star || !im.s?.length) return;
-    constel.position.copy(star.pos); const base = star.item ? star.item.size : 1.4; const n = im.s.length, ring = base * 2.0;
-    im.s.forEach((k, i) => {
-      const a = i / n * 6.283 - 1.2, r = ring * (1 + 0.12 * Math.sin(i * 2.7));
-      const pl = new THREE.Mesh(circleGeo, new THREE.MeshBasicMaterial({ map: dither(i + 5), transparent: true, opacity: 0.95, side: THREE.DoubleSide }));
-      pl.position.set(Math.cos(a) * r, Math.sin(a) * r * 0.7, (Math.random() - 0.5) * 1.5); pl.userData = { base: base * 0.42 }; pl.scale.setScalar(0.001);
-      pl.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0xF4F2EC, transparent: true, opacity: 0.25 })));
-      const sh = new THREE.Mesh(circleGeo, new THREE.MeshBasicMaterial({ map: SHADE, transparent: true, depthWrite: false })); sh.position.z = 0.002; pl.add(sh);
-      constel.add(pl);
-      new THREE.TextureLoader().setCrossOrigin("anonymous").load(thumbUrl(k), t => { t.colorSpace = THREE.SRGBColorSpace; pl.material.map = t; pl.material.needsUpdate = true; });
-    });
-    constelT = 0;
+  let focus = null, activeDom = null, selection = 0, destination = null, arrivalTimer = null;
+  function beginArrival(title, context, caption) {
+    clearTimeout(arrivalTimer);
+    destination = { title, context, caption };
+    $("arrival").classList.remove("show");
+    document.body.classList.add("in-transit");
+    document.body.classList.remove("arrived");
   }
-  function release(closeToo) { auto = null; pendingWarp = null; if (focus) { focus = null; clearConstellation(); closeDrawer(); if (closeToo) audio.play.close(); } reticle.material.opacity = 0; if (closeToo) thrust = 0; }
+  function finishArrival() {
+    if (!destination) return;
+    $("arrival-title").textContent = destination.title;
+    $("arrival-context").textContent = destination.context;
+    $("arrival-caption").textContent = destination.caption;
+    document.body.classList.remove("in-transit");
+    document.body.classList.add("arrived");
+    $("arrival").classList.add("show");
+    if (focus) openDrawer(focus);
+    arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 4200);
+    destination = null;
+  }
+  function release(closeToo) {
+    selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
+    destination = null; clearTimeout(arrivalTimer); $("arrival").classList.remove("show");
+    document.body.classList.remove("in-transit", "arrived");
+    closeDrawer();
+    if (focus && closeToo) audio.play.close();
+    focus = null; reticle.material.opacity = 0;
+  }
   addEventListener("orb:release", () => release(true));
 
   function starRecord(index) {
@@ -123,25 +143,27 @@ async function boot() {
   }
   async function enterStar(index) {
     release();
+    const requested = selection;
     const galaxy = stars.galaxyOf(index); const j = stars.local[index];
     // make sure its name shard is in before opening the drawer
     if (!nameOf(manifest, galaxy, j)) { const { shardFor, loadShard } = await import("./data.js"); const s = shardFor(manifest, galaxy, j); if (s?.file) await loadShard(s.file); }
+    if (requested !== selection) return;
     const star = starRecord(index); if (!star.slug) return;
     focus = star; activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
+    beginArrival(prettyName(star.slug), `${galaxy} / dataset discovered`, "Every image has a world inside it.");
     flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
-    openDrawer(star); showConstellation(star); tag.hide(); audio.play.select(); audio.play.open();
-    history.replaceState(null, "", "#" + star.slug);
+    tag.hide(); audio.play.select();
+    setDestination(star.slug);
   }
   function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
   function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
-  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); history.replaceState(null, "", "#galaxy/" + k.toLowerCase()); }
+  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; beginArrival(k, "You have arrived / galaxy", `${fmt(manifest.galaxies[k].n)} datasets. A new world to explore.`); flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
   function randomJump() {
     const pickPlanet = Math.random() < 0.7 && planets.items.length;
     if (pickPlanet) { const it = planets.items[Math.floor(Math.random() * planets.items.length)]; enterPlanet(it); }
     else enterStar(Math.floor(Math.random() * stars.total));
-    // always give the jump its hyperspace treatment
-    setTimeout(() => { if (auto && !warpPhase && auto.target.distanceTo(ship.position) <= JUMP && !reduce) hyperspace(auto.target, auto.standoff); }, 0);
+
   }
   $("rnd").addEventListener("click", randomJump);
 
@@ -250,9 +272,11 @@ async function boot() {
   canvas.addEventListener("pointermove", e => {
     mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; mx = e.clientX; my = e.clientY;
     if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-    if (moved > 6) { canvas.classList.add("dragging"); if (auto) auto = null; steer(-dx * 0.0038, dy * 0.0032); }
+    if (moved > 6) { canvas.classList.add("dragging"); if (auto || focus) release(); steer(-dx * 0.0038, dy * 0.0032); }
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
+  canvas.addEventListener("pointerleave", () => { mouse.set(10, 10); tag.hide(); });
+  canvas.addEventListener("pointercancel", () => { dragging = false; canvas.classList.remove("dragging"); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
   // WASD moves the ship in its own frame: W thrust, S reverse, A/D slide left and right; Q/E spin about the
   // view axis; hold Shift for turbo. Turning is the mouse's job (drag), with the arrow keys as a fallback.
@@ -284,7 +308,8 @@ async function boot() {
   let hot = null, hotStar = -1;
   function hover() {
     if (dragging) return;
-    ray.setFromCamera(mouse, camera); const hits = ray.intersectObjects(planets.active(), false); const h = hits.length ? hits[0].object : null;
+    ray.setFromCamera(mouse, camera);
+    const hits = ray.intersectObjects(planets.active(), false); const h = hits.length ? hits[0].object : null;
     if (h !== hot) { hot = h; if (h) audio.play.tick(); if (h && (!focus || h.userData.item !== focus.item)) { const it = h.userData.item; tag.show(`${esc(prettyName(it.slug))}<small>${esc(it.dom)}</small>`, mx, my); } else if (hotStar < 0) tag.hide(); }
     if (h && (!focus || h.userData.item !== focus.item)) tag.move(mx, my);
     canvas.classList.toggle("hot", !!h || hotStar >= 0);
@@ -352,7 +377,7 @@ async function boot() {
   qEl.addEventListener("input", () => { searchQuery = qEl.value; if (!searchQuery.trim()) { renderResults({ q: "", hits: [], total: 0 }); return; } resEl.innerHTML = `<div class="meta">${search.ready ? "Searching" : "Loading the catalog"}…</div>`; resEl.classList.add("open"); search.query(searchQuery, renderResults); });
   qEl.addEventListener("focus", () => { searched = true; search.load(); if (hits.length) resEl.classList.add("open"); });
   qEl.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!hits.length) return; sel = (sel + (e.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length; resEl.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === sel)); }
-    else if (e.key === "Enter") { e.preventDefault(); pick(sel); } else if (e.key === "Escape") { qEl.value = ""; searchQuery = ""; renderResults({ q: "", hits: [], total: 0 }); qEl.blur(); } e.stopPropagation(); });
+    else if (e.key === "Enter") { if (e.isComposing || e.keyCode === 229) return; e.preventDefault(); pick(sel); } else if (e.key === "Escape") { qEl.value = ""; searchQuery = ""; renderResults({ q: "", hits: [], total: 0 }); qEl.blur(); } e.stopPropagation(); });
   document.addEventListener("pointerdown", e => { if (!$("search").contains(e.target)) resEl.classList.remove("open"); });
 
   /* ---------- loop ---------- */
@@ -361,21 +386,22 @@ async function boot() {
   function loop() {
     requestAnimationFrame(loop); const dt = Math.min(clock.getDelta(), 0.05); t += dt; frame++;
     const T = now(); stars.tick(T);
-    // the focused star is orbiting: keep the autopilot target, reticle and constellation on it,
+    // the focused star is orbiting: keep the autopilot target and reticle on it,
     // and once holding, let the orbit carry the ship along with it
     if (focus) { prevStar.copy(focus.pos); starNow(focus.G, focus.j, T, focus.pos);
-      if (auto) auto.target.copy(focus.pos); else ship.position.add(tmp.copy(focus.pos).sub(prevStar));
-      reticle.position.copy(focus.pos); constel.position.copy(focus.pos); }
+      if (auto) auto.target.copy(focus.pos);
+      if (!warpPhase) ship.position.add(tmp.copy(focus.pos).sub(prevStar));
+      reticle.position.copy(focus.pos); }
     updateWarp(dt);
     if (auto && !warpPhase) {
       tmp.copy(auto.target).sub(ship.position); const dist = tmp.length(); const h = headingTo(tmp); tYaw = yaw + wrap(h.yaw - yaw); tPitch = h.pitch;
       const remain = dist - auto.standoff; thrust = remain > 0.4 ? Math.min(40, Math.sqrt(Math.max(0, remain) * 16) + 0.4) : 0;
-      if (remain <= 0.4) { auto = null; thrust = 0; if (focus && innerWidth > 720) tYaw = yaw - 0.22; audio.play.arrive();
+      if (remain <= 0.4) { auto = null; thrust = 0; speed = 0; yaw = tYaw; pitch = tPitch; roll = tRoll = 0; camRig.rotation.z = 0; finishArrival(); audio.play.arrive();
         arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
     const fwdIn = keys.w - keys.s * 0.6, turn = keys.l - keys.r, rollIn = keys.q - keys.e, sideIn = keys.d - keys.a;
-    if ((fwdIn || turn || rollIn || sideIn) && auto) { auto = null; pendingWarp = null; }
+    if ((fwdIn || turn || rollIn || sideIn) && (auto || focus)) release();
     if (turn) steer(turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9), 0);
     if (rollIn) tRoll += rollIn * dt * 1.7;
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
@@ -395,7 +421,6 @@ async function boot() {
     for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
       const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
-    if (constel.children.length) { constelT += dt; constel.children.forEach((c, i) => { c.quaternion.copy(qBill); const k = Math.min(1, Math.max(0, (constelT - i * 0.07) * 2.2)); const e = 1 - Math.pow(1 - k, 3); c.scale.setScalar(c.userData.base * e + 0.001); }); }
     if (reticle.material.opacity > 0) { reticle.material.rotation = t * 0.6; const rd = reticle.position.distanceTo(camP); reticle.scale.setScalar(0.06 * rd + 0.6); }
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
     if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
@@ -405,16 +430,20 @@ async function boot() {
   }
   loop();
 
-  // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL hash)
+  // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL)
   introDone.then(async () => {
-    const hash = decodeURIComponent(location.hash.slice(1));
+    if (selection > 0) return;
+    const startingSelection = selection;
+    const destination = new URL(location.href).searchParams.get("destination") || "";
     const first = domains[Math.floor(Math.random() * domains.length)]; const G = galaxies[first];
     ship.position.copy(G.center).add(new THREE.Vector3(0.3, 0.25, 1).normalize().multiplyScalar(WORLD * 1.6));
-    if (hash.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === hash.slice(7)); if (k) return goDomain(k); }
-    if (hash.includes("/")) { const found = await findSlug(hash); if (found >= 0) return enterStar(found); }
+    if (destination.startsWith("galaxy/")) { const k = domains.find(d => d.toLowerCase() === destination.slice(7)); if (k) return goDomain(k); }
+    if (destination.includes("/")) { const found = await findSlug(destination); if (selection !== startingSelection) return; if (found >= 0) return enterStar(found); }
     goDomain(first);
   });
   async function findSlug(slug) {
+    const planet = planets.bySlug.get(slug);
+    if (planet) return stars.start[planet.dom] + planet.j;
     // search shards for a slug (loads at most all shards once; used only for deep links)
     for (const k of [...domains, "Uncharted"]) { const lists = await galaxyShards(manifest, k); let j = 0; for (const list of lists) { for (const e of list) { if (e[0] === slug) return stars.start[k] + j; j++; } } }
     return -1;
