@@ -1,0 +1,52 @@
+name: Harvest all imagery
+# One-off full pass over the catalog: four workers each take a quarter of the shards (~3.5h at 6 req/s),
+# then a merge job folds their results into whatever the nightly has done meanwhile and commits once.
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node pipeline/build-index.mjs --from raw
+      - name: Harvest part ${{ matrix.part }}
+        env:
+          ROBOFLOW_API_KEY: ${{ secrets.ROBOFLOW_API_KEY }}
+        run: PARTS=4 PART=${{ matrix.part }} PART_OUT=harvest-out BATCH=60000 RATE=6 node pipeline/build-imagery-api.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imagery-part-${{ matrix.part }}
+          path: harvest-out/
+          retention-days: 3
+  merge:
+    needs: harvest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: imagery-part-*
+          path: harvested
+          merge-multiple: true
+      - name: Merge, rebuild, commit
+        run: |
+          git config user.name "universe-orb bot"
+          git config user.email "bot@users.noreply.github.com"
+          git pull --rebase origin main
+          node pipeline/merge-imagery.mjs harvested
+          node pipeline/build-index.mjs --from raw
+          git add public/data pipeline/cache/slugs.json
+          git diff --cached --quiet || git commit -m "imagery: full harvest"
+          git pull --rebase origin main
+          git push
