@@ -66,7 +66,8 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
     if (start === null) start = now;
     let t = (now - start) / 1000;
     if (skipped && t < T.warp) { start = now - T.warp * 1000; t = T.warp; skipped = false; }
-    const countK = clamp01((t - T.countStart) / (T.countEnd - T.countStart));
+    // The short intro skips counting, so its zero-length count phase is already complete.
+    const countK = short ? 1 : clamp01((t - T.countStart) / (T.countEnd - T.countStart));
     // counts like something counting: single digits at first, then a surge, then a firm landing on the total
     const ck = countK < 0.5 ? 8 * Math.pow(countK, 4) : 1 - Math.pow(-2 * countK + 2, 4) / 2;
     const count = short ? total : 1 + (total - 1) * ck;
