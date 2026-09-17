@@ -72,8 +72,6 @@ export function createIntroBadge(host, reducedMotion) {
   const logoBounds = new THREE.Box3().setFromObject(badge);
   const logoCenter = logoBounds.getCenter(new THREE.Vector3());
   disc.position.copy(logoCenter);
-  // The near rim projects lower than its pivot; lift it clear of the R's feet throughout the sway.
-  disc.position.y += (logoBounds.max.y - logoBounds.min.y) * .18;
   badge.add(disc);
   let disposed = false;
   function render(seconds = 0) {
