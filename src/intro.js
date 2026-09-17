@@ -11,14 +11,14 @@ const CSS = `
 .uo-intro .entry-brand{color:var(--ink);font-weight:500}
 .uo-intro .entry-header span:last-child{font:14px/1.5 var(--mono)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
-.uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.16em;text-indent:.16em;margin:0;text-wrap:balance}
+.uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.2em;text-indent:.2em;margin:0;text-wrap:balance}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
 .uo-intro .entry-badge canvas{z-index:0}
 .uo-intro .entry-badge.badge-ready img{opacity:0}
 .uo-intro .entry-description{font:400 clamp(16px,2vw,20px)/1.5 var(--sans);color:var(--mute);max-width:30ch;margin:0;text-wrap:balance}
-.uo-intro .entry-button{font:500 16px/1.5 var(--sans);background:var(--ink);color:var(--ground);border:1px solid var(--ink);border-radius:8px;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer;transition:background .2s,color .2s}
-.uo-intro .entry-button:hover{background:var(--ground);color:var(--ink)}
+.uo-intro .entry-button{font:500 16px/1.5 var(--sans);background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:8px;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer;transition:background .2s,color .2s}
+.uo-intro .entry-button:hover{background:var(--hair);color:var(--ink)}
 .uo-intro .entry-button:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
 .uo-intro .entry-facts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;font:14px/1.5 var(--mono);color:var(--mute)}
 .uo-intro .entry-facts strong{font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -29,7 +29,7 @@ const CSS = `
  .uo-intro .entry-header{gap:12px}.uo-intro .entry-header span:last-child{font-family:var(--sans)}
  .uo-intro .entry-center{gap:24px;padding:28px 0}
  .uo-intro .entry-badge{height:clamp(140px,23svh,210px)}
- .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.12em;text-indent:.12em}
+ .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.16em;text-indent:.16em}
  .uo-intro .entry-description{max-width:25ch}.uo-intro .entry-button{min-width:220px}
  .uo-intro .entry-footer{flex-direction:column;gap:8px;justify-content:center;text-align:center}.uo-intro .entry-desktop-hint{display:none}.uo-intro .entry-mobile-hint{display:inline}
 }
