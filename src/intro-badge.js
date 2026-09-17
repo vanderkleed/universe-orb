@@ -45,13 +45,8 @@ export function createIntroBadge(host, reducedMotion) {
       geometry.translate(-416, -193.5, -11);
       geometry.rotateX(Math.PI);
       geometry.scale(.01, .01, .01);
-      // A gently domed face bends the studio reflections without changing the SVG silhouette.
-      const positions = geometry.attributes.position;
-      for (let i = 0; i < positions.count; i++) {
-        const x = positions.getX(i), y = positions.getY(i);
-        positions.setZ(i, positions.getZ(i) + .13 * (1 - (x * x + y * y) / 20));
-      }
-      geometry.computeVertexNormals(); geometries.push(geometry);
+      // Keep caps planar so triangulation does not create seams in metallic reflections.
+      geometries.push(geometry);
       badge.add(new THREE.Mesh(geometry, [face, edge]));
     }
   }
