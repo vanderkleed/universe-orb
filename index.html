@@ -15,7 +15,7 @@
       }
     }
   </script>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Universe · Roboflow explorer</title>
   <meta name="description" content="Fly a mirrored orb through every public dataset on Roboflow Universe.">
   <meta name="color-scheme" content="dark">
@@ -76,14 +76,18 @@
       <text class="orbit-name" text-anchor="middle"><textPath id="selection-name" href="#selection-name-path" startOffset="50%"></textPath></text>
       <text class="orbit-by" text-anchor="middle"><textPath id="selection-by" href="#selection-by-path" startOffset="50%"></textPath></text>
     </svg>
+    <div class="selection-mobile-summary"><h2 id="selection-mobile-name"></h2><p id="selection-mobile-by"></p></div>
     <div class="selection-actions" role="group" aria-label="Dataset actions">
       <button id="selection-details" class="orbit-action" aria-label="Dataset details" aria-expanded="false" aria-controls="drawer">
+        <span class="mobile-action-label">Details</span>
         <svg aria-hidden="true"><path id="orbit-details-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-details-path" startOffset="50%">DETAILS</textPath></text></svg>
       </button>
       <a id="selection-open" class="orbit-action" aria-label="Open dataset on Universe in a new tab" target="_blank" rel="noopener">
+        <span class="mobile-action-label">Open ↗</span>
         <svg aria-hidden="true"><path id="orbit-open-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-open-path" startOffset="50%">OPEN ↗</textPath></text></svg>
       </a>
       <button id="selection-leave" class="orbit-action" aria-label="Keep flying">
+        <span class="mobile-action-label">Leave</span>
         <svg aria-hidden="true"><path id="orbit-leave-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-leave-path" startOffset="50%">LEAVE</textPath></text></svg>
       </button>
     </div>
@@ -111,7 +115,17 @@
     </div>
   </aside>
 
-  <div class="intro" id="intro"><div><p id="intro-p"></p></div></div>
+  <button class="btn mobile-random" id="mobile-rnd" type="button" disabled>Random jump</button>
+
+  <div class="touch-flight" aria-label="Touch flight controls">
+    <p>Drag to look · Tap a light to travel</p>
+    <div class="touch-flight-buttons">
+      <button class="btn" id="touch-fly" aria-label="Hold to fly forward">Hold to fly</button>
+      <button class="btn" id="touch-overview" aria-pressed="false">Overview</button>
+    </div>
+  </div>
+
+  <div class="intro" id="intro"><div><p id="intro-p">Loading Universe…</p></div></div>
 
   <div class="hint" id="hint" aria-live="polite"></div>
 
@@ -123,12 +137,14 @@
       <p>Every point of light is a real public dataset on Roboflow Universe — all 330,000 of them,
       gathered into galaxies by subject.</p>
       <div class="keysg">
-        <div><kbd>wasd</kbd> move · <kbd>q</kbd><kbd>e</kbd> spin · hold <kbd>shift</kbd> for turbo</div>
-        <div><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
-        <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search</div>
+        <div class="mobile-guide">Drag to look · Tap a light to travel · Pinch to zoom</div>
+        <div class="mobile-guide">Hold to fly moves you forward. Overview zooms out to the galaxies.</div>
+        <div class="desktop-guide"><kbd>wasd</kbd> move · <kbd>q</kbd><kbd>e</kbd> spin · hold <kbd>shift</kbd> for turbo</div>
+        <div class="desktop-guide"><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
+        <div class="desktop-guide"><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search</div>
         <div>Select Dataset details beside a world for images and information</div>
         <div>Explore reveals galaxies and flight controls</div>
-        <div><kbd>esc</kbd> collapses details, then returns to free flight</div>
+        <div class="desktop-guide"><kbd>esc</kbd> collapses details, then returns to free flight</div>
       </div>
       <div class="row">
         <button class="go-btn" id="g-jump">Jump somewhere random</button>

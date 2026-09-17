@@ -62,12 +62,19 @@ export function createAudio(opts = {}) {
     if (!on || !ctx) return; const t = ctx.currentTime + at;
     const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
     const e = ctx.createGain(); e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(g, t + a); e.gain.exponentialRampToValueAtTime(0.0005, t + d);
-    o.connect(e); e.connect(master); o.start(t); o.stop(t + d + 0.05);
+    o.connect(e); e.connect(master);
+    o.onended = () => { o.disconnect(); e.disconnect(); };
+    o.start(t); o.stop(t + d + 0.05);
   }
   const play = {
     tick() { if (!on || !ctx) return; const now = ctx.currentTime; if (now - lastTick < 0.06) return; lastTick = now; tone(2200 + Math.random() * 400, { d: 0.05, g: 0.035, a: 0.002 }); },
     select() { tone(523.25, { d: 0.5, g: 0.12 }); tone(783.99, { d: 0.7, g: 0.08, at: 0.09 }); },
     arrive() { tone(130.81, { type: "triangle", d: 1.6, g: 0.14 }); tone(196, { d: 1.2, g: 0.05, at: 0.05 }); },
+    contact() {
+      tone(340, { a: 0.008, d: 0.38, g: 0.075, slide: 155 });
+      tone(690, { a: 0.012, d: 0.28, g: 0.025, slide: 410 });
+      tone(1010, { a: 0.004, d: 0.16, g: 0.009, slide: 720 });
+    },
     open() { tone(880, { d: 0.25, g: 0.04, slide: 1320 }); },
     close() { tone(880, { d: 0.2, g: 0.03, slide: 660 }); },
 

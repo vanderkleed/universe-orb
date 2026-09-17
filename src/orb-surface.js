@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { thumbUrl } from "./data.js";
 
-export function createOrbSurface(orb, reducedMotion) {
+export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
   const loader = new THREE.TextureLoader().setCrossOrigin("anonymous");
   const uniforms = {
     cover: { value: null },
@@ -91,7 +91,7 @@ export function createOrbSurface(orb, reducedMotion) {
   shell.visible = false;
   orb.add(shell);
   const parentRotation = new THREE.Quaternion();
-  let request = 0, amount = 0, target = 0, current = null, ready = false, departing = false;
+  let request = 0, amount = 0, target = 0, current = null, ready = false;
 
   function resetTexture() {
     uniforms.cover.value?.dispose();
@@ -105,7 +105,6 @@ export function createOrbSurface(orb, reducedMotion) {
       const version = ++request;
       resetTexture();
       current = star;
-      departing = false;
       amount = 0;
       target = 0;
       uniforms.contactAge.value = -1;
@@ -127,15 +126,22 @@ export function createOrbSurface(orb, reducedMotion) {
     arrive() { target = 1; },
     get ready() { return ready; },
     leave() {
-      ++request; target = 0; departing = true;
+      ++request;
+      target = amount = 0;
+      current = null;
+      ready = false;
+      shell.visible = false;
+      uniforms.progress.value = 0;
       uniforms.contactAge.value = -1;
       uniforms.settleAge.value = -1;
+      resetTexture();
     },
     update(dt, cameraRotation) {
       const goal = ready ? target : 0;
       const previous = amount;
-      amount = reducedMotion || !departing ? goal : THREE.MathUtils.clamp(amount - dt / 1.9, 0, 1);
-      if (!reducedMotion && !departing) {
+      amount = goal;
+      if (previous === 0 && amount > 0) onContact();
+      if (!reducedMotion) {
         if (previous === 0 && amount > 0) uniforms.contactAge.value = 0;
         if (previous < 1 && amount === 1) uniforms.settleAge.value = 0;
         if (uniforms.contactAge.value >= 0) uniforms.contactAge.value = Math.min(0.9, uniforms.contactAge.value + dt);
@@ -146,12 +152,6 @@ export function createOrbSurface(orb, reducedMotion) {
       // Keep photographs upright while the mirror and flight rig turn independently.
       orb.getWorldQuaternion(parentRotation);
       shell.quaternion.copy(parentRotation.invert()).multiply(cameraRotation);
-      if (amount === 0 && departing) {
-        resetTexture();
-        current = null;
-        ready = false;
-        departing = false;
-      }
     },
     get amount() { return uniforms.progress.value; },
     get star() { return current; },
