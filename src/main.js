@@ -163,6 +163,8 @@ async function boot() {
 
   }
   $("rnd").addEventListener("click", randomJump);
+  $("mobile-rnd").addEventListener("click", () => { $("results").classList.remove("open"); $("q").blur(); randomJump(); });
+  $("mobile-rnd").disabled = false;
 
   /* ---------- big bang: replay every dataset's arrival in creation order ---------- */
   const MO = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
