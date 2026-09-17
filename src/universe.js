@@ -151,14 +151,15 @@ export function buildStars(layout, manifest) {
         vec3 wp = (g == 0) ? rp : qrot(q, rp) + gCenter[g];
         vec4 mv = modelViewMatrix * vec4(wp, 1.0); float d = -mv.z; float f = exp(-d*d*fogD*fogD*0.9);
         vA = f*(0.35+0.65*min(1.0, sz-0.5)); float near = smoothstep(0.0, 6.0, d); vA *= 0.25+0.75*near;
-        if (distance(position, absorbedPosition) < 0.0001) vA *= 1.0 - absorption;
+        float remainingSize = distance(position, absorbedPosition) < 0.0001 ? 1.0 - absorption : 1.0;
+        if (remainingSize < 0.001) vA = 0.0;
         float ig = 0.0;
         if (uPlay < 9.0e8) {   // big-bang replay: stars ignite at their birth month, with a brief flare
           float born = 1.0 - smoothstep(uPlay - 0.7, uPlay, birth);
           ig = born * exp(-max(0.0, uPlay - birth) * 0.9);
           vA *= born * (1.0 + ig * 2.5);
         }
-        gl_PointSize = clamp(sz*pr*(150.0/max(d,1.0)), 1.0*pr, 4.2*pr)*(1.0-warpK*0.6)*(1.0+ig*0.8); gl_Position = projectionMatrix*mv; }`,
+        gl_PointSize = clamp(sz*pr*(150.0/max(d,1.0)), 1.0*pr, 4.2*pr)*(1.0-warpK*0.6)*(1.0+ig*0.8)*remainingSize; gl_Position = projectionMatrix*mv; }`,
     fragmentShader: `uniform sampler2D tex; varying float vA; void main(){ vec4 t=texture2D(tex,gl_PointCoord); gl_FragColor=vec4(0.957,0.949,0.925,t.a*vA); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });

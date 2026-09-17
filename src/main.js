@@ -417,10 +417,15 @@ async function boot() {
     if (focus && !auto) reticle.material.opacity = (focus.item ? 0 : 0.9) * (1 - absorption);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
     if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
-    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
-      const dc = m.position.distanceTo(camP); const remaining = it === absorbed?.item ? 1 - absorption : 1;
-      const fade = Math.max(0, Math.min(1, (dc - 2) / 3)) * remaining;
-      m.material.opacity = 0.96 * fade; m.userData.shade.material.opacity = remaining;
+    orb.getWorldPosition(v3);
+    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T);
+      const pull = it === absorbed?.item ? absorption : 0;
+      m.position.copy(it.pos).lerp(v3, pull);
+      const s = it.size * (m === hot ? 1.12 : 1) * Math.max(0.001, 1 - pull);
+      m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
+      const dc = m.position.distanceTo(camP);
+      const fade = Math.max(0, Math.min(1, (dc - 2) / 3));
+      m.material.opacity = 0.96 * fade; m.userData.shade.material.opacity = 1;
       m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade;
       m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });

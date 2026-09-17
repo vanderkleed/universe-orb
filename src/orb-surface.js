@@ -11,13 +11,20 @@ export function createOrbSurface(orb, reducedMotion) {
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
-    transparent: true,
-    depthWrite: false,
+    depthWrite: true,
     vertexShader: `
+      uniform float progress;
       varying vec3 surface;
+      varying float wrapDistance;
       void main() {
-        surface = position / 0.725;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        surface = normalize(position);
+        float angle = atan(surface.y, surface.x);
+        float wave = sin(angle * 3.0 + progress * 5.0) * 0.045 * (1.0 - surface.z * surface.z);
+        float front = mix(-0.12, 1.16, progress);
+        wrapDistance = front - surface.z - wave;
+        float moving = sin(progress * 3.14159265);
+        float lip = exp(-pow(wrapDistance / 0.055, 2.0)) * 0.024 * moving;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position + surface * lip, 1.0);
       }
     `,
     fragmentShader: `
@@ -26,15 +33,26 @@ export function createOrbSurface(orb, reducedMotion) {
       uniform vec2 aspect;
       uniform float progress;
       varying vec3 surface;
+      varying float wrapDistance;
       void main() {
+        // Opaque coverage travels from the silhouette inward, leaving a shrinking chrome center.
+        if (wrapDistance < 0.0) discard;
         vec3 n = normalize(surface);
-        vec2 uv = n.xy * 0.5 * aspect + 0.5;
+        vec2 sphericalUV = vec2(atan(n.x, max(n.z, 0.0001)), asin(clamp(n.y, -1.0, 1.0))) / 3.14159265;
+        vec2 uv = sphericalUV * aspect + 0.5;
         vec3 color = hasCover ? texture2D(cover, uv).rgb : vec3(0.18);
-        float light = 0.52 + 0.48 * pow(max(0.0, n.z), 0.45);
-        // A soft wave spreads from the facing pole around the sphere, uncovering chrome in reverse on departure.
-        float boundary = mix(1.15, -0.3, progress);
-        float reveal = smoothstep(boundary - 0.12, boundary + 0.12, n.z);
-        gl_FragColor = vec4(color * light, reveal);
+        vec3 lightDirection = normalize(vec3(-0.6, 0.75, 1.0));
+        float diffuse = max(dot(n, lightDirection), 0.0);
+        float limb = pow(max(n.z, 0.0), 0.38);
+        float light = (0.2 + 0.8 * diffuse) * (0.38 + 0.62 * limb);
+        vec3 halfDirection = normalize(lightDirection + vec3(0.0, 0.0, 1.0));
+        float highlight = pow(max(dot(n, halfDirection), 0.0), 72.0) * 0.22;
+        float rim = pow(1.0 - max(n.z, 0.0), 4.0) * 0.045;
+        float lip = (1.0 - smoothstep(0.0, 0.045, wrapDistance)) * sin(progress * 3.14159265);
+        vec3 shaded = color * light + vec3(highlight + rim);
+        // A narrow metallic meniscus gives the advancing edge thickness without fading the photograph.
+        shaded = mix(shaded, vec3(0.22 + diffuse * 0.5), lip * 0.85);
+        gl_FragColor = vec4(shaded, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }
@@ -79,7 +97,7 @@ export function createOrbSurface(orb, reducedMotion) {
     leave() { ++request; target = 0; departing = true; },
     update(dt, cameraRotation) {
       const goal = ready ? target : 0;
-      amount = reducedMotion ? goal : THREE.MathUtils.clamp(amount + Math.sign(goal - amount) * dt / 1.35, 0, 1);
+      amount = reducedMotion ? goal : THREE.MathUtils.clamp(amount + Math.sign(goal - amount) * Math.min(dt / 1.9, Math.abs(goal - amount)), 0, 1);
       uniforms.progress.value = amount * amount * (3 - 2 * amount);
       shell.visible = amount > 0;
       // Keep photographs upright while the mirror and flight rig turn independently.
