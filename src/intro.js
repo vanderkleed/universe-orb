@@ -8,8 +8,7 @@ const CSS = `
 .uo-intro canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
 .uo-intro .entry-layout{box-sizing:border-box;min-height:100%;min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding:max(28px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left))}
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
-.uo-intro .entry-brand{color:var(--ink);font-weight:500}
-.uo-intro .entry-header span:last-child{font:14px/1.5 var(--mono)}
+.uo-intro .entry-brand{display:block;width:132px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
 .uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.2em;text-indent:.2em;margin:0;text-wrap:balance}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
@@ -34,7 +33,7 @@ const CSS = `
 .uo-intro details[open] .entry-read-less{display:inline}
 @media(max-width:720px){
  .uo-intro .entry-layout{padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
- .uo-intro .entry-header{gap:12px}.uo-intro .entry-header span:last-child{font-family:var(--sans)}
+ .uo-intro .entry-header{gap:12px}
  .uo-intro .entry-center{gap:24px;padding:28px 0}
  .uo-intro .entry-badge{height:clamp(140px,23svh,210px)}
  .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.16em;text-indent:.16em}
@@ -55,7 +54,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.className = "uo-intro";
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
-    <header class="entry-header"><span class="entry-brand">Roboflow</span><span>A universe of vision</span></header>
+    <header class="entry-header"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"></header>
     <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">Universe</h1>
       <p class="entry-description entry-description-desktop">${description}</p>
       <div class="entry-description entry-description-mobile">
