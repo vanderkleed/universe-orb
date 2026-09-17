@@ -69,7 +69,8 @@ export function createIntroBadge(host, reducedMotion) {
   const disc = new THREE.Mesh(discGeometry, [face, edge]);
   // Center the orbit in the mark's depth so its near edge passes in front and its far edge behind.
   disc.rotation.set(-1.55, 0, -.25, "ZYX");
-  disc.position.set(0, -.25, 0);
+  const logoCenter = new THREE.Box3().setFromObject(badge).getCenter(new THREE.Vector3());
+  disc.position.copy(logoCenter);
   badge.add(disc);
   let disposed = false;
   function render(seconds = 0) {
