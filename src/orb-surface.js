@@ -93,11 +93,13 @@ export function createOrbSurface(orb, reducedMotion) {
         ready = true;
       }, undefined, () => { if (version === request) ready = true; });
     },
+    contact(progress) { target = THREE.MathUtils.clamp(progress, 0, 1); },
     arrive() { target = 1; },
+    get ready() { return ready; },
     leave() { ++request; target = 0; departing = true; },
     update(dt, cameraRotation) {
       const goal = ready ? target : 0;
-      amount = reducedMotion ? goal : THREE.MathUtils.clamp(amount + Math.sign(goal - amount) * Math.min(dt / 1.9, Math.abs(goal - amount)), 0, 1);
+      amount = reducedMotion || !departing ? goal : THREE.MathUtils.clamp(amount - dt / 1.9, 0, 1);
       uniforms.progress.value = amount * amount * (3 - 2 * amount);
       shell.visible = amount > 0;
       // Keep photographs upright while the mirror and flight rig turn independently.
