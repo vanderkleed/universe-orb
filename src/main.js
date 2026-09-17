@@ -34,7 +34,8 @@ async function boot() {
   /* ---------- renderer ---------- */
   const canvas = $("gl");
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0x000000, 1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const mobileScreen = matchMedia("(max-width:720px)");
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobileScreen.matches ? 1.5 : 2)); renderer.setClearColor(0x000000, 1); renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x000000, FOG);
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 2000);
   const ship = new THREE.Object3D(); scene.add(ship);
@@ -47,7 +48,7 @@ async function boot() {
   const planets = buildPlanets(scene, layout, imagery);
 
   /* ---------- the orb ---------- */
-  const cubeRT = new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+  const cubeRT = new THREE.WebGLCubeRenderTarget(mobileScreen.matches ? 128 : 256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
   const cubeCam = new THREE.CubeCamera(0.3, 900, cubeRT); scene.add(cubeCam);
   const orb = new THREE.Mesh(new THREE.SphereGeometry(0.72, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.05, envMap: cubeRT.texture, envMapIntensity: 1.25 }));
   ship.add(orb);
@@ -262,21 +263,62 @@ async function boot() {
 
   /* ---------- input ---------- */
   let dragging = false, lx = 0, ly = 0, moved = 0, mx = innerWidth / 2, my = innerHeight / 2; const mouse = new THREE.Vector2(0, 0);
-  canvas.addEventListener("pointerdown", e => { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId); });
+  const pointers = new Map(); let pinchDistance = 0, pinched = false;
+  const pointerDistance = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  canvas.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    if (!pointers.size) { moved = 0; pinched = false; }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragging = true; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId);
+    if (pointers.size === 2) { pinchDistance = pointerDistance(); pinched = true; }
+  });
   canvas.addEventListener("pointermove", e => {
     mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; mx = e.clientX; my = e.clientY;
-    if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-    if (moved > 6) { canvas.classList.add("dragging"); if (auto || focus) release(); steer(-dx * 0.0038, dy * 0.0032); }
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size > 1) {
+      const distance = pointerDistance();
+      if (distance > 0 && pinchDistance > 0) tCamDist = Math.max(4.5, Math.min(220, tCamDist * pinchDistance / distance));
+      pinchDistance = distance; return;
+    }
+    if (!dragging || pinched) return;
+    const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+    const threshold = e.pointerType === "touch" ? 10 : 6;
+    if (moved > threshold) { canvas.classList.add("dragging"); if (auto || focus) release(); steer(-dx * 0.0038, dy * 0.0032); }
   });
-  canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
+  const endPointer = e => {
+    if (!pointers.has(e.pointerId)) return;
+    const tapped = e.type === "pointerup" && !pinched && moved < (e.pointerType === "touch" ? 10 : 6);
+    pointers.delete(e.pointerId); dragging = pointers.size > 0;
+    if (!dragging) canvas.classList.remove("dragging");
+    if (tapped) clickAt(e.clientX, e.clientY);
+    mouse.set(10, 10); tag.hide();
+  };
+  canvas.addEventListener("pointerup", endPointer);
+  canvas.addEventListener("pointercancel", endPointer);
+  canvas.addEventListener("lostpointercapture", endPointer);
   canvas.addEventListener("pointerleave", () => { mouse.set(10, 10); tag.hide(); });
-  canvas.addEventListener("pointercancel", () => { dragging = false; canvas.classList.remove("dragging"); });
   canvas.addEventListener("wheel", e => { e.preventDefault(); tCamDist = Math.max(4.5, Math.min(220, tCamDist * (1 + e.deltaY * 0.0016))); }, { passive: false });
   // WASD moves the ship in its own frame: W thrust, S reverse, A/D slide left and right; Q/E spin about the
   // view axis; hold Shift for turbo. Turning is the mouse's job (drag), with the arrow keys as a fallback.
   const keys = { w: 0, s: 0, a: 0, d: 0, l: 0, r: 0, q: 0, e: 0, boost: 0 };
+  let touchThrust = false;
+  const flyButton = $("touch-fly");
+  const stopTouchFlight = () => { touchThrust = false; };
+  flyButton.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); flyButton.setPointerCapture(e.pointerId); touchThrust = true;
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => flyButton.addEventListener(type, stopTouchFlight));
+  flyButton.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); touchThrust = true; } });
+  flyButton.addEventListener("keyup", stopTouchFlight);
+  flyButton.addEventListener("blur", stopTouchFlight);
+  addEventListener("blur", stopTouchFlight);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopTouchFlight(); });
+  $("touch-overview").addEventListener("click", () => { tCamDist = tCamDist > 60 ? 6.5 : 180; });
   const keyMap = { w: "w", arrowup: "w", s: "s", arrowdown: "s", a: "a", d: "d", arrowleft: "l", arrowright: "r", q: "q", e: "e" };
   addEventListener("keydown", e => {
+    if (document.body.classList.contains("title-open")) return;
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
@@ -378,7 +420,10 @@ async function boot() {
   const clock = new THREE.Clock(); let t = 0, frame = 0; const qBill = new THREE.Quaternion();
   const prevStar = new THREE.Vector3();
   function loop() {
-    requestAnimationFrame(loop); const dt = Math.min(clock.getDelta(), 0.05); t += dt; frame++;
+    requestAnimationFrame(loop); const dt = Math.min(clock.getDelta(), 0.05);
+    if (document.body.classList.contains("title-open") || document.hidden) return;
+    t += dt; frame++;
+    $("touch-overview").setAttribute("aria-pressed", String(tCamDist > 60));
     const T = now(); stars.tick(T);
     // the focused star is orbiting: keep the autopilot target and reticle on it,
     // and once holding, let the orbit carry the ship along with it
@@ -418,7 +463,7 @@ async function boot() {
         arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
-    const fwdIn = keys.w - keys.s * 0.6, turn = keys.l - keys.r, rollIn = keys.q - keys.e, sideIn = keys.d - keys.a;
+    const fwdIn = Math.max(keys.w, Number(touchThrust)) - keys.s * 0.6, turn = keys.l - keys.r, rollIn = keys.q - keys.e, sideIn = keys.d - keys.a;
     if ((fwdIn || turn || rollIn || sideIn) && (auto || focus)) release();
     if (turn) steer(turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9), 0);
     if (rollIn) tRoll += rollIn * dt * 1.7;
@@ -471,7 +516,7 @@ async function boot() {
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
     if (reticle.material.opacity > 0) { reticle.material.rotation = t * 0.6; const rd = reticle.position.distanceTo(camP); reticle.scale.setScalar(0.06 * rd + 0.6); }
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
-    if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
+    if (frame % (mobileScreen.matches ? 4 : 2) === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
     renderer.render(scene, camera);
     if (focus && !auto) {
       orb.getWorldPosition(v3);

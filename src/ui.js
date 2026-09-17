@@ -42,7 +42,7 @@ export const tag = {
 export function setExploration(open) {
   document.body.classList.toggle("exploration-open", open);
   $("explore-toggle").setAttribute("aria-expanded", String(open));
-  $("explore-toggle").textContent = open ? "Hide controls" : "Explore";
+  $("explore-toggle").textContent = open ? "Done" : "Explore";
 }
 $("explore-toggle").addEventListener("click", () => setExploration(!document.body.classList.contains("exploration-open")));
 
@@ -52,6 +52,8 @@ export function showSelection(star) {
   orbitRadius = null;
   const name = prettyName(star.slug);
   $("selection-title").textContent = name + " · by " + prettyWs(star.slug);
+  $("selection-mobile-name").textContent = name;
+  $("selection-mobile-by").textContent = "by " + prettyWs(star.slug);
   $("selection-details").setAttribute("aria-label", "Details for " + name);
   $("selection-open").href = "https://universe.roboflow.com/" + star.slug;
   $("selection").hidden = false;
@@ -78,7 +80,7 @@ export function clearSelection() {
 export function placeSelection(x, y, radius, visible) {
   if (!selected) return;
   const el = $("selection");
-  el.classList.toggle("offscreen", !visible);
+  el.classList.toggle("offscreen", !visible && !matchMedia("(max-width:720px)").matches);
   el.style.setProperty("--orb-x", `${x}px`);
   el.style.setProperty("--orb-y", `${y}px`);
   // Never clamp a ring inward to fit the viewport: the orb surface stays clear at every zoom.
