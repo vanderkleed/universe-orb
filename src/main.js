@@ -6,7 +6,7 @@ import { createSearch } from "./search.js";
 import { createAudio } from "./audio.js";
 import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING } from "./textures.js";
-import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, openDrawer, closeDrawer } from "./ui.js";
+import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
 import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
 
@@ -109,6 +109,7 @@ async function boot() {
     clearTimeout(arrivalTimer);
     destination = { title, context, caption };
     $("arrival").classList.remove("show");
+    setExploration(false);
     document.body.classList.add("in-transit");
     document.body.classList.remove("arrived");
   }
@@ -119,8 +120,8 @@ async function boot() {
     $("arrival-caption").textContent = destination.caption;
     document.body.classList.remove("in-transit");
     document.body.classList.add("arrived");
-    $("arrival").classList.add("show");
-    if (focus) openDrawer(focus);
+    if (focus) showSelection(focus);
+    else $("arrival").classList.add("show");
     arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 6800);
     destination = null;
   }
@@ -128,7 +129,7 @@ async function boot() {
     selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
     destination = null; clearTimeout(arrivalTimer); $("arrival").classList.remove("show");
     document.body.classList.remove("in-transit", "arrived");
-    closeDrawer();
+    clearSelection();
     if (focus && closeToo) audio.play.close();
     focus = null; reticle.material.opacity = 0;
   }
@@ -251,7 +252,7 @@ async function boot() {
   const mark = k => { seen.add(k); try { localStorage.setItem(SEEN, JSON.stringify([...seen])); } catch {} };
   let hintT = null;
   function hintOnce(key, html, ms = 6500) {
-    if (seen.has(key) || !$("guide").hidden) return; mark(key);
+    if (!document.body.classList.contains("exploration-open") || seen.has(key) || !$("guide").hidden) return; mark(key);
     const el = $("hint"); el.innerHTML = html; el.classList.add("show");
     clearTimeout(hintT); hintT = setTimeout(() => el.classList.remove("show"), ms);
   }
@@ -260,8 +261,6 @@ async function boot() {
   $("help").addEventListener("click", openGuide);
   $("g-close").addEventListener("click", closeGuide);
   $("g-jump").addEventListener("click", () => { closeGuide(); randomJump(); });
-  // first visit: the guide comes up once the arrival flight has begun
-  if (!seen.has("guide")) introDone.then(() => setTimeout(openGuide, 2600));
   // gentle nudges, each shown once, spaced out
   let arrivals = 0, searched = false;
   setTimeout(() => { if (!searched) hintOnce("h-search", `<kbd>/</kbd> search all ${fmt(manifest.total)} datasets`); }, 75000);
@@ -287,7 +286,7 @@ async function boot() {
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
-    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
+    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } if ($("drawer").classList.contains("open")) { closeDrawer(); return; } if (document.body.classList.contains("exploration-open")) { setExploration(false); $("explore-toggle").focus(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
   addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.l = keys.r = keys.q = keys.e = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
@@ -425,6 +424,12 @@ async function boot() {
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
     if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
     renderer.render(scene, camera);
+    if (focus && !auto) {
+      v3.copy(focus.pos).project(camera);
+      const distance = focus.pos.distanceTo(camP);
+      const radius = Math.max(24, Math.min(160, (focus.item?.size || 0.4) * innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360) * Math.max(0.1, distance)) + 10));
+      placeSelection((v3.x * 0.5 + 0.5) * innerWidth, (-v3.y * 0.5 + 0.5) * innerHeight, radius, v3.z > -1 && v3.z < 1 && Math.abs(v3.x) < 1 && Math.abs(v3.y) < 1);
+    }
     if (frame % 3 === 0) { placeLabels(); updateReadout(); }
     if (frame % 4 === 1) scan();
   }

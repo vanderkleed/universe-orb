@@ -33,6 +33,7 @@
   <nav>
     <div class="wordmark">Universe <small>Roboflow · explorer</small></div>
     <div class="navr">
+      <button class="btn" id="explore-toggle" aria-expanded="false" aria-controls="rail strip snd help rnd">Explore</button>
       <div class="stats" id="stats"></div>
       <div class="search" id="search">
         <input id="q" type="search" placeholder="Search datasets" autocomplete="off" spellcheck="false" aria-label="Search datasets"><kbd>/</kbd>
@@ -67,8 +68,21 @@
     <p id="arrival-caption"></p>
   </div>
 
-  <aside class="drawer" id="drawer" aria-hidden="true">
-    <div class="top"><span id="dr-dom">—</span><button id="dr-close" aria-label="Close">close ✕</button></div>
+  <section id="selection" class="selection" aria-label="Selected dataset" hidden>
+    <div class="selection-ring" aria-hidden="true"></div>
+    <div class="selection-info">
+      <span id="selection-context" class="selection-context"></span>
+      <h2 id="selection-name"></h2>
+      <p id="selection-by"></p>
+      <div class="selection-actions">
+        <button id="selection-details" aria-expanded="false" aria-controls="drawer">Dataset details <span aria-hidden="true">↗</span></button>
+        <button id="selection-leave">Keep flying</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="drawer" id="drawer" aria-label="Dataset details" aria-hidden="true">
+    <div class="top"><span id="dr-dom">—</span><button id="dr-close" aria-label="Collapse dataset details">Collapse</button></div>
     <div class="body" id="dr-body">
       <div class="figure" id="fig">
         <img id="dr-img" alt="" crossorigin="anonymous" onerror="this.style.opacity=0" onload="this.style.opacity=1">
@@ -104,8 +118,9 @@
         <div><kbd>wasd</kbd> move · <kbd>q</kbd><kbd>e</kbd> spin · hold <kbd>shift</kbd> for turbo</div>
         <div><kbd>click</kbd> fly to anything · <kbd>drag</kbd> look</div>
         <div><kbd>R</kbd> random jump · <kbd>B</kbd> big bang · <kbd>/</kbd> search</div>
-        <div>Dataset details and samples appear when you arrive</div>
-        <div><kbd>esc</kbd> closes details and returns to free flight</div>
+        <div>Select Dataset details beside a world for images and information</div>
+        <div>Explore reveals galaxies and flight controls</div>
+        <div><kbd>esc</kbd> collapses details, then returns to free flight</div>
       </div>
       <div class="row">
         <button class="go-btn" id="g-jump">Jump somewhere random</button>

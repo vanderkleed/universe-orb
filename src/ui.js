@@ -34,6 +34,46 @@ export const tag = {
   hide() { this.el.style.opacity = 0; },
 };
 
+export function setExploration(open) {
+  document.body.classList.toggle("exploration-open", open);
+  $("explore-toggle").setAttribute("aria-expanded", String(open));
+  $("explore-toggle").textContent = open ? "Hide controls" : "Explore";
+}
+$("explore-toggle").addEventListener("click", () => setExploration(!document.body.classList.contains("exploration-open")));
+
+let selected = null;
+export function showSelection(star) {
+  selected = star;
+  $("selection-context").textContent = (star.galaxy === "Uncharted" ? "Interstellar" : star.galaxy) + " / dataset";
+  $("selection-name").textContent = prettyName(star.slug);
+  $("selection-by").textContent = "by " + prettyWs(star.slug);
+  $("selection").hidden = false;
+  document.body.classList.add("has-selection");
+}
+export function clearSelection() {
+  const hadFocus = $("selection").contains(document.activeElement);
+  selected = null;
+  $("selection").hidden = true;
+  document.body.classList.remove("has-selection");
+  closeDrawer();
+  if (hadFocus) $("gl").focus({ preventScroll: true });
+}
+export function placeSelection(x, y, radius, visible) {
+  if (!selected) return;
+  const el = $("selection");
+  el.classList.toggle("offscreen", !visible);
+  el.style.setProperty("--orb-x", `${x}px`);
+  el.style.setProperty("--orb-y", `${y}px`);
+  el.style.setProperty("--orb-size", `${radius * 2}px`);
+  const width = Math.min(280, innerWidth - 32);
+  const right = x + radius + 24;
+  const left = right + width < innerWidth - 24 ? right : x - radius - width - 24;
+  el.style.setProperty("--label-x", `${Math.max(16, Math.min(innerWidth - width - 16, left))}px`);
+  el.style.setProperty("--label-y", `${Math.max(96, Math.min(innerHeight - 220, y - 40))}px`);
+}
+$("selection-details").addEventListener("click", () => { if (selected) openDrawer(selected); });
+$("selection-leave").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));
+
 /* ---------- drawer ---------- */
 const drawer = $("drawer"), body = $("dr-body"), fig = $("fig");
 let current = null;
@@ -43,9 +83,11 @@ export function closeDrawer() {
   const hadFocus = drawer.contains(document.activeElement);
   current = null; drawer.classList.remove("open"); drawer.setAttribute("aria-hidden", "true"); drawer.inert = true;
   document.body.classList.remove("details-open");
-  if (hadFocus) $("gl").focus({ preventScroll: true });
+  $("selection-details").setAttribute("aria-expanded", "false");
+  if (hadFocus) (selected ? $("selection-details") : $("gl")).focus({ preventScroll: true });
 }
 export function openDrawer(star) {
+  setExploration(false);
   // star: { slug, galaxy, lastmod, cover }
   current = star; const { slug } = star;
   $("dr-dom").textContent = (star.galaxy === "Uncharted" ? "Interstellar" : star.galaxy) + " · public dataset";
@@ -58,7 +100,9 @@ export function openDrawer(star) {
   $("facts").innerHTML = [["Galaxy", star.galaxy === "Uncharted" ? "Interstellar (unclassified)" : star.galaxy], ["Updated", monthName(star.lastmod)], ["Workspace", slug.split("/")[0]], ["Project", slug.split("/")[1]]].map(([k, v]) => `<b>${k}</b><span>${esc(v)}</span>`).join("");
   $("dr-note").textContent = "";
   drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); drawer.inert = false; body.scrollTop = 0;
-  document.body.classList.add("details-open"); $("dr-close").focus();
+  document.body.classList.add("details-open");
+  $("selection-details").setAttribute("aria-expanded", "true");
+  $("dr-close").focus();
 
   imageryFor(slug).then(im => {
     if (current !== star) return;
@@ -87,4 +131,4 @@ export function openDrawer(star) {
   });
 }
 function setFigure(src, cap) { const img = $("dr-img"); img.style.opacity = src ? 1 : 0; img.src = src; $("cap").textContent = cap || ""; $("cap").style.display = cap ? "" : "none"; }
-$("dr-close").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));
+$("dr-close").addEventListener("click", closeDrawer);

@@ -175,11 +175,73 @@
   .epoch .d{font-family:var(--sans);font-weight:500;font-size:30px;letter-spacing:-0.015em;color:var(--ink)}
   .epoch .c{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-top:9px}
 
+/* Quiet exploration keeps controls available without making them the scenery. */
+nav{border:0;background:transparent;backdrop-filter:none;pointer-events:none;height:72px}
+nav .wordmark,nav .navr{pointer-events:auto}
+.wordmark small,.stats{display:none}
+.navr{gap:12px}
+.btn{font:14px/1.5 var(--sans);letter-spacing:0;text-transform:none;min-height:28px;border-radius:6px;background:rgba(0,0,0,.5)}
+.search{min-width:180px;background:rgba(0,0,0,.5);border-radius:6px;height:42px}
+.search input,.search input::placeholder{font:14px/1.5 var(--sans);letter-spacing:0;text-transform:none}
+.search:focus-within{min-width:220px}
+body:not(.exploration-open) :is(.rail,.strip,.readout,.inst,.dlabel,.slabel:not(.hit),#snd,#help,#rnd){display:none}
+body:not(.exploration-open) .hint{display:none}
+.grid{display:none}
+.exploration-open nav{background:var(--ground)}
+.exploration-open .rail{top:88px;padding:16px;background:rgba(0,0,0,.85);border:1px solid var(--hair);border-radius:8px;max-height:calc(100dvh - 240px);overflow:auto}
+.exploration-open .rail button{font-size:14px;letter-spacing:0;text-transform:none;min-height:28px}
+.exploration-open .rail .h{font-size:14px;letter-spacing:0}
+.has-selection :is(.readout,.tag,.inst,.hint){display:none}
+.selection-info h2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.selection-info p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.selection-info{box-sizing:border-box;padding:12px;background:rgba(0,0,0,.72);border-radius:8px}
+.drawer{top:88px;right:16px;bottom:16px;width:min(360px,calc(100vw - 32px));border:1px solid var(--hair);border-radius:12px;transform:translateX(calc(100% + 32px));transition:transform .7s cubic-bezier(.22,.61,.36,1)}
+.drawer .top{font-size:14px;letter-spacing:0;text-transform:none;gap:12px;padding:12px 18px}
+.drawer .top button{min-height:32px;flex-shrink:0}
+.drawer .body{padding:18px;gap:20px}
+.drawer h2{font-size:24px;line-height:1.2}
+.selection[hidden]{display:none}
+.selection{position:fixed;inset:0;z-index:8;pointer-events:none}
+.selection.offscreen{visibility:hidden}
+.selection-ring{position:absolute;left:var(--orb-x,50%);top:var(--orb-y,50%);width:var(--orb-size,80px);height:var(--orb-size,80px);transform:translate(-50%,-50%);border:1px solid var(--hair);border-radius:50%}
+.selection-info{position:absolute;left:var(--label-x,60%);top:var(--label-y,50%);width:min(280px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;text-shadow:0 2px 12px var(--ground)}
+.selection-context{font:14px/1.5 var(--sans);color:var(--mute)}
+.selection-info h2{font:400 24px/1.2 var(--sans);letter-spacing:-.02em;margin:0;text-wrap:balance;overflow-wrap:anywhere}
+.selection-info p{font:14px/1.5 var(--sans);color:var(--mute);margin:0;overflow-wrap:anywhere}
+.selection-actions{display:flex;align-items:center;gap:16px;pointer-events:auto}
+.selection-actions button{font:14px/1.5 var(--sans);color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--hair);padding:10px 0;cursor:pointer;text-shadow:0 2px 12px var(--ground);min-height:44px}
+.selection-actions button:last-child{color:var(--mute);border-color:transparent}
+.selection-actions button:hover{color:var(--ink);border-color:var(--ink)}
+.selection-actions button:focus-visible,.drawer .top button:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
+.details-open .selection{visibility:hidden}
+@media(max-width:720px){
+  nav{height:64px;flex-wrap:wrap;align-content:center}
+  .navr{gap:8px;margin-left:12px;justify-content:flex-end}
+  .search{width:120px;min-width:0;flex:1;max-width:220px}
+  .search:focus-within{min-width:0}
+  .search kbd{display:none}
+  #explore-toggle{padding:6px 8px;white-space:nowrap}
+  .exploration-open nav{height:auto;min-height:64px;padding-top:12px;padding-bottom:12px}
+  .exploration-open .navr{flex:1 1 100%;flex-wrap:wrap;margin-left:0;justify-content:flex-start}
+  .exploration-open .search{flex:1 1 160px;min-width:160px;max-width:none}
+  .exploration-open .selection-info{bottom:88px}
+  .exploration-open #snd{display:inline-flex}
+  .exploration-open #rnd{font-size:14px}
+  .exploration-open #rnd::after{content:none}
+  .exploration-open .rail{display:none}
+  .exploration-open .strip button{font-size:14px;letter-spacing:0;text-transform:none}
+  .selection-info{left:16px;right:16px;top:auto;bottom:28px;width:auto;max-width:360px;background:rgba(0,0,0,.65);border-radius:8px;padding:16px;text-shadow:none}
+  .selection-info h2{font-size:22px}
+  .drawer{top:80px;bottom:16px}
+}
+@media(prefers-reduced-motion:reduce){.drawer{transition:none}}
+
 /* Arrival framing stays quiet so the real dataset imagery leads. */
 html{background:var(--ground)}
 .cinema-frame{position:fixed;inset:0;z-index:7;pointer-events:none;box-shadow:inset 0 0 0 var(--ground);transition:box-shadow 1.2s cubic-bezier(.2,.8,.2,1)}
 .in-transit .cinema-frame{box-shadow:inset 0 5vh 0 var(--ground),inset 0 -7vh 0 var(--ground)}
 .arrival{position:fixed;top:calc(var(--nav) + 48px);left:50%;width:min(600px,70vw);transform:translate(-50%,12px);text-align:center;z-index:9;opacity:0;pointer-events:none;transition:opacity 1s,transform 1s}
+.arrival:not(.show){visibility:hidden}
 .arrival.show{opacity:1;transform:translate(-50%,0)}
 .arrival span{font:14px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
 .arrival h2{font:400 clamp(32px,5vw,60px)/1.05 var(--sans);letter-spacing:-.035em;text-wrap:balance;overflow-wrap:anywhere;margin:16px 0}
@@ -188,9 +250,9 @@ html{background:var(--ground)}
 @property --ui-reveal{syntax:"<number>";inherits:true;initial-value:1}
 body{--ui-reveal:1;transition:--ui-reveal 2.6s cubic-bezier(.22,.61,.36,1) .35s}
 body.in-transit{--ui-reveal:0;transition:none}
-:is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){filter:opacity(var(--ui-reveal))}
+:is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){filter:opacity(var(--ui-reveal))}
 /* Visibility suppresses keyboard focus throughout travel; the reveal starts only on arrival. */
-.in-transit :is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){visibility:hidden;pointer-events:none}
+.in-transit :is(nav,.rail,.strip,.readout,.inst,.tag,.arrival,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){visibility:hidden;pointer-events:none}
 @media(prefers-reduced-motion:reduce){body{transition:none}}
 @media(max-width:1100px){.wordmark small{display:none}.navr{gap:12px}}
 @media(max-width:720px){
