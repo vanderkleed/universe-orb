@@ -16,7 +16,7 @@ const CSS = `
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
 .uo-intro .entry-badge canvas{z-index:0}
 .uo-intro .entry-badge.badge-ready img{opacity:0}
-.uo-intro .entry-description{font:400 clamp(16px,2vw,20px)/1.5 var(--sans);color:var(--mute);max-width:30ch;margin:0;text-wrap:balance}
+.uo-intro .entry-description{font:400 14px/1.6 var(--mono);color:var(--mute);width:100%;max-width:76ch;margin:0;text-align:left;text-wrap:pretty}
 .uo-intro .entry-button{position:relative;font:500 16px/1.5 var(--sans);background:transparent;color:var(--ink);border:0;border-radius:0;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer}
 .uo-intro .entry-button-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:transparent;stroke:currentColor;stroke-width:.75;transition:fill .2s}
 .uo-intro .entry-button:hover .entry-button-frame{fill:var(--hair)}
@@ -32,7 +32,7 @@ const CSS = `
  .uo-intro .entry-center{gap:24px;padding:28px 0}
  .uo-intro .entry-badge{height:clamp(140px,23svh,210px)}
  .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.16em;text-indent:.16em}
- .uo-intro .entry-description{max-width:25ch}.uo-intro .entry-button{min-width:220px}
+ .uo-intro .entry-description{max-width:76ch}.uo-intro .entry-button{min-width:220px}
  .uo-intro .entry-footer{flex-direction:column;gap:8px;justify-content:center;text-align:center}.uo-intro .entry-desktop-hint{display:none}.uo-intro .entry-mobile-hint{display:inline}
 }
 @media(prefers-reduced-motion:reduce){.uo-intro,.uo-intro .entry-button{transition:none}}
@@ -50,7 +50,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
     <header class="entry-header"><span class="entry-brand">Roboflow</span><span>A universe of vision</span></header>
     <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">Universe</h1>
-      <p class="entry-description">Every point of light is a dataset.</p>
+      <p class="entry-description">Every point of light is a dataset. Universe is a flyable map of Roboflow Universe: 330,000 public datasets rendered as stars, gathered into 18 galaxies by subject, from medical imaging to agriculture to sports. Fly toward anything and the nearest datasets resolve into photo planets you can open, with sample images, class breakdowns and a link straight to the dataset. The newest ones trail comets. The catalog rebuilds nightly from Universe itself, so it is never a snapshot; it is the live shape of what the computer vision community has built.</p>
       <div class="entry-facts"><span role="img" aria-label="${fmt(total)} public datasets"><strong class="entry-count" aria-hidden="true">${fmt(total)}</strong> <span aria-hidden="true">datasets</span></span><span><strong>${fmt(galaxies)}</strong> galaxies</span></div>
       <button type="button" class="entry-button"><svg class="entry-button-frame" viewBox="0 0 200 52" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polygon points="9,1 191,1 199,9 199,43 191,51 9,51 1,43 1,9" vector-effect="non-scaling-stroke" /></svg>Enter Universe <span aria-hidden="true">↗</span></button>
     </div>
