@@ -77,7 +77,8 @@ export function createIntroBadge(host, reducedMotion) {
   function render(seconds = 0) {
     if (disposed || document.hidden) return;
     const t = reducedMotion ? 0 : seconds;
-    badge.rotation.set(.12 + Math.sin(t * .35) * .045, -.16 + Math.sin(t * .28) * .2, -.025);
+    // Forward rocking drops the near rim over the R; keep pitch level and yaw restrained.
+    badge.rotation.set(0, -.06 + Math.sin(t * .28) * .04, 0);
     renderer.render(scene, camera);
     host.classList.add("badge-ready");
   }
