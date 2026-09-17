@@ -53,15 +53,17 @@ export function showSelection(star) {
   const name = prettyName(star.slug);
   $("selection-title").textContent = name + " · by " + prettyWs(star.slug);
   $("selection-details").setAttribute("aria-label", "Details for " + name);
+  $("selection-open").href = "https://universe.roboflow.com/" + star.slug;
   $("selection").hidden = false;
   document.body.classList.add("has-selection");
 }
-function fitOrbitText(text, length, font) {
+function fitOrbitText(text, length, font, tracking) {
   const context = orbitMeasure.getContext("2d");
   context.font = font;
-  if (context.measureText(text).width <= length) return text;
+  const width = value => context.measureText(value).width + Array.from(value).length * tracking;
+  if (width(text) <= length) return text;
   const characters = Array.from(text);
-  while (characters.length && context.measureText(characters.join("") + "…").width > length) characters.pop();
+  while (characters.length && width(characters.join("") + "…") > length) characters.pop();
   return characters.join("") + "…";
 }
 const orbitMeasure = document.createElement("canvas");
@@ -79,20 +81,24 @@ export function placeSelection(x, y, radius, visible) {
   el.classList.toggle("offscreen", !visible);
   el.style.setProperty("--orb-x", `${x}px`);
   el.style.setProperty("--orb-y", `${y}px`);
-  const r = Math.round(Math.max(94, radius + 22));
+  // Never clamp a ring inward to fit the viewport: the orb surface stays clear at every zoom.
+  const r = Math.ceil(Math.max(86, radius + 36));
   if (orbitRadius !== r) {
     orbitRadius = r;
-    const extent = r + 24;
+    const menuRadius = r + 52, extent = menuRadius + 28;
     el.style.setProperty("--orbit-size", `${extent * 2}px`);
-    $("selection-orbit").setAttribute("viewBox", `${-extent} ${-extent} ${extent * 2} ${extent * 2}`);
+    el.querySelectorAll("svg").forEach(svg => svg.setAttribute("viewBox", `${-extent} ${-extent} ${extent * 2} ${extent * 2}`));
     $("selection-name-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 1 ${r} 0`);
     $("selection-by-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 0 ${r} 0`);
     const font = getComputedStyle(el).fontFamily;
-    $("selection-name").textContent = fitOrbitText(prettyName(selected.slug), Math.PI * r * .86, `16px ${font}`);
-    $("selection-by").textContent = fitOrbitText("by " + prettyWs(selected.slug), Math.PI * r * .8, `14px ${font}`);
+    $("selection-name").textContent = fitOrbitText(prettyName(selected.slug).toUpperCase(), Math.PI * r * .9, `16px ${font}`, 2.8);
+    $("selection-by").textContent = fitOrbitText(("by " + prettyWs(selected.slug)).toUpperCase(), Math.PI * r * .8, `14px ${font}`, 2);
+    ["details", "open", "leave"].forEach((action, index) => {
+      const angle = 144 - index * 54, half = 23;
+      const point = degrees => `${menuRadius * Math.cos(degrees * Math.PI / 180)} ${menuRadius * Math.sin(degrees * Math.PI / 180)}`;
+      $("orbit-" + action + "-path").setAttribute("d", `M ${point(angle + half)} A ${menuRadius} ${menuRadius} 0 0 0 ${point(angle - half)}`);
+    });
   }
-  el.style.setProperty("--actions-x", `${Math.max(110, Math.min(innerWidth - 110, x))}px`);
-  el.style.setProperty("--actions-y", `${Math.max(110, Math.min(innerHeight - 72, y + r + 28))}px`);
 }
 $("selection-details").addEventListener("click", () => { if (selected) openDrawer(selected); });
 $("selection-leave").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));

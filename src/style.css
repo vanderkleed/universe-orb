@@ -191,7 +191,7 @@ body:not(.exploration-open) .hint{display:none}
 .exploration-open .rail{top:88px;padding:16px;background:rgba(0,0,0,.85);border:1px solid var(--hair);border-radius:8px;max-height:calc(100dvh - 240px);overflow:auto}
 .exploration-open .rail button{font-size:14px;letter-spacing:0;text-transform:none;min-height:28px}
 .exploration-open .rail .h{font-size:14px;letter-spacing:0}
-.has-selection :is(.readout,.tag,.inst,.hint){display:none}
+.has-selection :is(.readout,.tag,.inst,.hint,.slabel,.dlabel){display:none}
 .drawer{top:88px;right:16px;bottom:16px;width:min(360px,calc(100vw - 32px));border:1px solid var(--hair);border-radius:12px;transform:translateX(calc(100% + 32px));transition:transform .7s cubic-bezier(.22,.61,.36,1)}
 .drawer .top{font-size:14px;letter-spacing:0;text-transform:none;gap:12px;padding:12px 18px}
 .drawer .top button{min-height:32px;flex-shrink:0}
@@ -202,14 +202,18 @@ body:not(.exploration-open) .hint{display:none}
 .selection.offscreen{visibility:hidden}
 .selection{font-family:var(--sans)}
 .selection-orbit{position:absolute;left:var(--orb-x,50%);top:var(--orb-y,50%);width:var(--orbit-size,236px);height:var(--orbit-size,236px);transform:translate(-50%,-50%);overflow:visible}
-.selection-orbit text{paint-order:stroke;stroke:var(--ground);stroke-width:3px;stroke-linejoin:round;font-family:var(--sans);font-weight:400}
-.orbit-name{font-size:16px;fill:var(--ink)}
-.orbit-by{font-size:14px;fill:var(--mute)}
-.selection-actions{position:absolute;left:var(--actions-x,50%);top:var(--actions-y,70%);transform:translateX(-50%);display:flex;align-items:center;gap:20px;pointer-events:auto;white-space:nowrap}
-.selection-actions button{font:14px/1.5 var(--sans);color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--hair);padding:10px 0;cursor:pointer;text-shadow:0 2px 12px var(--ground);min-height:44px}
-.selection-actions button:last-child{color:var(--mute);border-color:transparent}
-.selection-actions button:hover{color:var(--ink);border-color:var(--ink)}
-.selection-actions button:focus-visible,.drawer .top button:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
+.selection-orbit text{paint-order:stroke;stroke:var(--ground);stroke-width:1px;stroke-linejoin:round;font-family:var(--sans);font-weight:400}
+.orbit-name{font-size:16px;letter-spacing:2.8px;fill:var(--ink)}
+.orbit-by{font-size:14px;letter-spacing:2px;fill:var(--mute)}
+.selection-actions{position:absolute;left:var(--orb-x,50%);top:var(--orb-y,50%);width:var(--orbit-size,332px);height:var(--orbit-size,332px);transform:translate(-50%,-50%);pointer-events:none}
+.orbit-action{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:transparent;color:var(--mute);pointer-events:none;outline:none}
+.orbit-action svg{display:block;width:100%;height:100%;overflow:visible}
+.orbit-action-track{fill:none;stroke:transparent;stroke-width:44px;pointer-events:stroke;cursor:pointer}
+.orbit-action text{font:14px var(--sans);letter-spacing:1.5px;fill:currentColor;pointer-events:auto;cursor:pointer;paint-order:stroke;stroke:var(--ground);stroke-width:1px;transition:fill .25s}
+.orbit-action:hover,.orbit-action:focus-visible{color:var(--ink)}
+.orbit-action:hover .orbit-action-track,.orbit-action:focus-visible .orbit-action-track{stroke:var(--hair)}
+.orbit-action:focus-visible text{text-decoration:underline;text-underline-offset:5px}
+.drawer .top button:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
 .details-open .selection{visibility:hidden}
 @media(max-width:720px){
   nav{height:64px;flex-wrap:wrap;align-content:center}

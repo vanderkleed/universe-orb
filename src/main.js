@@ -416,9 +416,13 @@ async function boot() {
     if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
     renderer.render(scene, camera);
     if (focus && !auto) {
-      v3.copy(focus.pos).project(camera);
-      const distance = focus.pos.distanceTo(camP);
-      const radius = Math.max(24, Math.min(160, (focus.item?.size || 0.4) * innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360) * Math.max(0.1, distance)) + 10));
+      orb.getWorldPosition(v3);
+      tmp.copy(v3).applyMatrix4(camera.matrixWorldInverse);
+      v3.project(camera);
+      // Frame the navigation orb, not the dataset behind it. A conservative sphere bound keeps every glyph outside its silhouette.
+      const depth = -tmp.z, worldRadius = 0.74 * orb.scale.x;
+      const focalLength = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
+      const radius = focalLength * worldRadius / Math.max(0.1, depth - worldRadius) * (1 + Math.hypot(tmp.x, tmp.y) / Math.max(0.1, depth));
       placeSelection((v3.x * 0.5 + 0.5) * innerWidth, (-v3.y * 0.5 + 0.5) * innerHeight, radius, v3.z > -1 && v3.z < 1 && Math.abs(v3.x) < 1 && Math.abs(v3.y) < 1);
     }
     if (frame % 3 === 0) { placeLabels(); updateReadout(); }
