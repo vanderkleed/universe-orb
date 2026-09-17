@@ -58,7 +58,7 @@ export function createIntroBadge(host, reducedMotion) {
   const discShape = new THREE.Shape();
   discShape.absarc(0, 0, 4.25, 0, Math.PI * 2, false);
   const aperture = new THREE.Path();
-  aperture.absarc(0, 0, 2.65, 0, Math.PI * 2, true);
+  aperture.absarc(0, 0, 3.25, 0, Math.PI * 2, true);
   discShape.holes.push(aperture);
   const discGeometry = new THREE.ExtrudeGeometry(discShape, {
     depth: .1, bevelEnabled: true, bevelThickness: .025, bevelSize: .035,
@@ -67,9 +67,9 @@ export function createIntroBadge(host, reducedMotion) {
   discGeometry.translate(0, 0, -.05);
   geometries.push(discGeometry);
   const disc = new THREE.Mesh(discGeometry, [face, edge]);
-  // Real depth keeps the entire mark unobstructed even as the badge gently turns.
-  disc.rotation.set(1.02, 0, .25, "ZYX");
-  disc.position.set(0, -.5, -3.9);
+  // Center the orbit in the mark's depth so its near edge passes in front and its far edge behind.
+  disc.rotation.set(1.24, 0, .25, "ZYX");
+  disc.position.set(0, -.25, 0);
   badge.add(disc);
   let disposed = false;
   function render(seconds = 0) {
