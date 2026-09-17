@@ -62,22 +62,30 @@
   <div class="tag" id="tag"></div>
 
   <div class="cinema-frame" aria-hidden="true"></div>
-  <div id="arrival" class="arrival" role="status" aria-live="polite">
-    <span id="arrival-context"></span>
-    <h2 id="arrival-title"></h2>
-    <p id="arrival-caption"></p>
+  <div class="location-label" aria-label="Current location">
+    <span>Universe</span><span aria-hidden="true">/</span><span id="location-name">Interstellar</span>
   </div>
 
   <section id="selection" class="selection" aria-label="Selected dataset" hidden>
-    <div class="selection-ring" aria-hidden="true"></div>
-    <div class="selection-info">
-      <span id="selection-context" class="selection-context"></span>
-      <h2 id="selection-name"></h2>
-      <p id="selection-by"></p>
-      <div class="selection-actions">
-        <button id="selection-details" aria-expanded="false" aria-controls="drawer">Dataset details <span aria-hidden="true">↗</span></button>
-        <button id="selection-leave">Keep flying</button>
-      </div>
+    <svg class="selection-orbit" id="selection-orbit" aria-labelledby="selection-title" role="img">
+      <title id="selection-title"></title>
+      <defs>
+        <path id="selection-name-path" />
+        <path id="selection-by-path" />
+      </defs>
+      <text class="orbit-name" text-anchor="middle"><textPath id="selection-name" href="#selection-name-path" startOffset="50%"></textPath></text>
+      <text class="orbit-by" text-anchor="middle"><textPath id="selection-by" href="#selection-by-path" startOffset="50%"></textPath></text>
+    </svg>
+    <div class="selection-actions" role="group" aria-label="Dataset actions">
+      <button id="selection-details" class="orbit-action" aria-label="Dataset details" aria-expanded="false" aria-controls="drawer">
+        <svg aria-hidden="true"><path id="orbit-details-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-details-path" startOffset="50%">DETAILS</textPath></text></svg>
+      </button>
+      <a id="selection-open" class="orbit-action" aria-label="Open dataset on Universe in a new tab" target="_blank" rel="noopener">
+        <svg aria-hidden="true"><path id="orbit-open-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-open-path" startOffset="50%">OPEN ↗</textPath></text></svg>
+      </a>
+      <button id="selection-leave" class="orbit-action" aria-label="Keep flying">
+        <svg aria-hidden="true"><path id="orbit-leave-path" class="orbit-action-track" /><text text-anchor="middle"><textPath href="#orbit-leave-path" startOffset="50%">LEAVE</textPath></text></svg>
+      </button>
     </div>
   </section>
 

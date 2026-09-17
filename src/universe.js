@@ -136,10 +136,11 @@ export function buildStars(layout, manifest) {
   geo.setAttribute("birth", new THREE.BufferAttribute(birth, 1));   // months since Jan 2020; drives the big-bang replay
   const mat = new THREE.ShaderMaterial({
     uniforms: { tex: { value: DOT }, fogD: { value: FOG }, pr: { value: Math.min(devicePixelRatio, 2) }, warpK: { value: 0 }, time: { value: 0 },
-      drift: { value: DRIFT }, gCenter: { value: uCenter }, gQuat: { value: uQuat }, gRot: { value: uRot }, uPlay: { value: 1e9 } },
+      drift: { value: DRIFT }, gCenter: { value: uCenter }, gQuat: { value: uQuat }, gRot: { value: uRot }, uPlay: { value: 1e9 },
+      absorbedPosition: { value: new THREE.Vector3(1e9, 1e9, 1e9) }, absorption: { value: 0 } },
     defines: { NG },
     vertexShader: `attribute float sz; attribute float gal; attribute float birth; varying float vA;
-      uniform float fogD, pr, warpK, time, drift, uPlay; uniform vec3 gCenter[NG]; uniform vec4 gQuat[NG]; uniform vec3 gRot[NG];
+      uniform float fogD, pr, warpK, time, drift, uPlay, absorption; uniform vec3 absorbedPosition; uniform vec3 gCenter[NG]; uniform vec4 gQuat[NG]; uniform vec3 gRot[NG];
       vec3 qrot(vec4 q, vec3 v){ return v + 2.0*cross(q.xyz, cross(q.xyz, v) + q.w*v); }
       void main(){
         int g = int(gal + 0.5); vec3 p = position;
@@ -150,13 +151,15 @@ export function buildStars(layout, manifest) {
         vec3 wp = (g == 0) ? rp : qrot(q, rp) + gCenter[g];
         vec4 mv = modelViewMatrix * vec4(wp, 1.0); float d = -mv.z; float f = exp(-d*d*fogD*fogD*0.9);
         vA = f*(0.35+0.65*min(1.0, sz-0.5)); float near = smoothstep(0.0, 6.0, d); vA *= 0.25+0.75*near;
+        float remainingSize = distance(position, absorbedPosition) < 0.0001 ? 1.0 - absorption : 1.0;
+        if (remainingSize < 0.001) vA = 0.0;
         float ig = 0.0;
         if (uPlay < 9.0e8) {   // big-bang replay: stars ignite at their birth month, with a brief flare
           float born = 1.0 - smoothstep(uPlay - 0.7, uPlay, birth);
           ig = born * exp(-max(0.0, uPlay - birth) * 0.9);
           vA *= born * (1.0 + ig * 2.5);
         }
-        gl_PointSize = clamp(sz*pr*(150.0/max(d,1.0)), 1.0*pr, 4.2*pr)*(1.0-warpK*0.6)*(1.0+ig*0.8); gl_Position = projectionMatrix*mv; }`,
+        gl_PointSize = clamp(sz*pr*(150.0/max(d,1.0)), 1.0*pr, 4.2*pr)*(1.0-warpK*0.6)*(1.0+ig*0.8)*remainingSize; gl_Position = projectionMatrix*mv; }`,
     fragmentShader: `uniform sampler2D tex; varying float vA; void main(){ vec4 t=texture2D(tex,gl_PointCoord); gl_FragColor=vec4(0.957,0.949,0.925,t.a*vA); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });

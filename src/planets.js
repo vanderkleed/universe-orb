@@ -50,7 +50,7 @@ export function buildPlanets(scene, layout, imagery) {
     const e = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: 0xF4F2EC, transparent: true, opacity: 0.2 })); m.add(e);
     const sh = new THREE.Mesh(circle, new THREE.MeshBasicMaterial({ map: SHADE, transparent: true, depthWrite: false })); sh.position.z = 0.002; sh.scale.setScalar(1.004); m.add(sh);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: DOT, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.setScalar(2.1); m.add(glow);
-    m.userData = { edge: e, glow, item: null, url: null };
+    m.userData = { edge: e, shade: sh, glow, item: null, url: null };
     group.add(m); pool.push(m);
   }
 
@@ -80,7 +80,10 @@ export function buildPlanets(scene, layout, imagery) {
       for (const c of cand) if (c.pos.distanceToSquared(it.pos) < s2) { ok = false; break; }
       if (ok) cand.push(it);
     }
-    if (pinned && !cand.includes(pinned)) cand[cand.length - 1] = pinned;
+    if (pinned && !cand.includes(pinned)) {
+      if (cand.length === POOL) cand.pop();
+      cand.push(pinned);
+    }
     const want = new Set(cand);
     const free = [];
     for (const m of pool) { const it = m.userData.item; if (it && !want.has(it)) { it.mesh = null; m.userData.item = null; m.visible = false; } if (!m.userData.item) free.push(m); }

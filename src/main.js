@@ -9,6 +9,7 @@ import { HAZE, DOT, RING } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
 import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
+import { createOrbSurface } from "./orb-surface.js";
 
 const $ = id => document.getElementById(id);
 function setDestination(destination) {
@@ -50,6 +51,7 @@ async function boot() {
   const cubeCam = new THREE.CubeCamera(0.3, 900, cubeRT); scene.add(cubeCam);
   const orb = new THREE.Mesh(new THREE.SphereGeometry(0.72, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.05, envMap: cubeRT.texture, envMapIntensity: 1.25 }));
   ship.add(orb);
+  const orbSurface = createOrbSurface(orb, reduce);
   orb.add(new THREE.Mesh(new THREE.SphereGeometry(0.74, 64, 64), new THREE.MeshBasicMaterial({ color: 0xF4F2EC, transparent: true, opacity: 0.1, side: THREE.BackSide, depthWrite: false })));
   const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: DOT, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending })); orbGlow.scale.setScalar(4.2); orb.add(orbGlow);
   scene.add(new THREE.AmbientLight(0xF4F2EC, 0.22)); const key = new THREE.DirectionalLight(0xF4F2EC, 0.45); key.position.set(3, 5, 4); scene.add(key);
@@ -104,32 +106,24 @@ async function boot() {
 
   /* ---------- focus ---------- */
   // A "star" record: { index (global star index), slug, galaxy, j, lastmod, cover, item (planet item or null) }
-  let focus = null, activeDom = null, selection = 0, destination = null, arrivalTimer = null;
-  function beginArrival(title, context, caption) {
-    clearTimeout(arrivalTimer);
-    destination = { title, context, caption };
-    $("arrival").classList.remove("show");
+  let focus = null, activeDom = null, selection = 0, destination = null;
+  function beginArrival(title) {
+    destination = title;
     setExploration(false);
     document.body.classList.add("in-transit");
-    document.body.classList.remove("arrived");
   }
   function finishArrival() {
     if (!destination) return;
-    $("arrival-title").textContent = destination.title;
-    $("arrival-context").textContent = destination.context;
-    $("arrival-caption").textContent = destination.caption;
     document.body.classList.remove("in-transit");
-    document.body.classList.add("arrived");
-    if (focus) showSelection(focus);
-    else $("arrival").classList.add("show");
-    arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 6800);
+    if (focus) { orbSurface.arrive(); showSelection(focus); }
     destination = null;
   }
   function release(closeToo) {
     selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
-    destination = null; clearTimeout(arrivalTimer); $("arrival").classList.remove("show");
-    document.body.classList.remove("in-transit", "arrived");
+    destination = null;
+    document.body.classList.remove("in-transit");
     clearSelection();
+    orbSurface.leave();
     if (focus && closeToo) audio.play.close();
     focus = null; reticle.material.opacity = 0;
   }
@@ -150,16 +144,16 @@ async function boot() {
     if (!nameOf(manifest, galaxy, j)) { const { shardFor, loadShard } = await import("./data.js"); const s = shardFor(manifest, galaxy, j); if (s?.file) await loadShard(s.file); }
     if (requested !== selection) return;
     const star = starRecord(index); if (!star.slug) return;
-    focus = star; activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
-    beginArrival(prettyName(star.slug), `${galaxy} / dataset discovered`, "Every image has a world inside it.");
-    flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
+    focus = star; orbSurface.prepare(star); activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
+    beginArrival(prettyName(star.slug));
+    flyTo(star.pos, 0);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
     tag.hide(); audio.play.select();
     setDestination(star.slug);
   }
   function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
   function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
-  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; beginArrival(k, "You have arrived / galaxy", `${fmt(manifest.galaxies[k].n)} datasets. A new world to explore.`); flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
+  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; beginArrival(k); flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
   function randomJump() {
     const pickPlanet = Math.random() < 0.7 && planets.items.length;
     if (pickPlanet) { const it = planets.items[Math.floor(Math.random() * planets.items.length)]; enterPlanet(it); }
@@ -392,10 +386,34 @@ async function boot() {
       if (!warpPhase) ship.position.add(tmp.copy(focus.pos).sub(prevStar));
       reticle.position.copy(focus.pos); }
     updateWarp(dt);
+    let contactApproach = false;
     if (auto && !warpPhase) {
-      tmp.copy(auto.target).sub(ship.position); const dist = tmp.length(); const h = headingTo(tmp); tYaw = yaw + wrap(h.yaw - yaw); tPitch = h.pitch;
-      const remain = dist - auto.standoff; thrust = remain > 0.4 ? Math.min(40, Math.sqrt(Math.max(0, remain) * 16) + 0.4) : 0;
-      if (remain <= 0.4) { auto = null; thrust = 0; speed = 0; yaw = tYaw; pitch = tPitch; roll = tRoll = 0; camRig.rotation.z = 0; finishArrival(); audio.play.arrive();
+      tmp.copy(auto.target).sub(ship.position); const dist = tmp.length();
+      if (dist > 0.001) { const h = headingTo(tmp); tYaw = yaw + wrap(h.yaw - yaw); tPitch = h.pitch; }
+      const remain = dist - auto.standoff;
+      const datasetRadius = (focus?.item?.size || 0) * 0.5;
+      const contactDistance = Math.max(0.72, datasetRadius + 0.12) + datasetRadius;
+      contactApproach = !!focus && dist <= contactDistance + 2;
+      let arrived = remain <= 0.4;
+      if (contactApproach) {
+        // The dataset stays in its orbit. Only the mirror advances, all the way to the shared center.
+        let remainingDistance;
+        if (orbSurface.ready) {
+          auto.contact ??= { elapsed: 0, startDistance: dist };
+          auto.contact.elapsed = Math.min(1, auto.contact.elapsed + dt / 0.95);
+          const remaining = auto.contact.startDistance * Math.pow(1 - auto.contact.elapsed, 3);
+          remainingDistance = Math.min(dist, remaining);
+        } else {
+          remainingDistance = Math.max(contactDistance, dist - contactDistance * 3 * dt);
+          remainingDistance = Math.min(dist, remainingDistance);
+        }
+        if (dist > 0) ship.position.addScaledVector(tmp, (dist - remainingDistance) / dist);
+        orbSurface.contact(1 - remainingDistance / contactDistance);
+        thrust = 0; speed = 0; strafe = 0;
+        arrived = remainingDistance <= 0.001;
+        if (arrived) ship.position.copy(auto.target);
+      } else thrust = remain > 0.4 ? Math.min(40, Math.sqrt(Math.max(0, remain) * 16) + 0.4) : 0;
+      if (arrived) { auto = null; thrust = 0; speed = 0; yaw = tYaw; pitch = tPitch; roll = tRoll = 0; camRig.rotation.z = 0; finishArrival(); audio.play.arrive();
         arrivals++; if (arrivals === 1 && !focus) setTimeout(() => hintOnce("h-click", "Every light is a dataset — <kbd>click</kbd> one to fly to it"), 1500);
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
@@ -408,26 +426,50 @@ async function boot() {
     ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, roll, "YXZ"));
     camRig.rotation.z += ((-yawVel * 0.1) - camRig.rotation.z) * Math.min(1, dt * 3);
     const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
-    fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
+    fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase && !contactApproach) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
     strafe += (sideIn * 7 * (keys.boost ? 3.5 : 1) - strafe) * Math.min(1, dt * 5);   // A/D slide along the ship's own right axis
     if (Math.abs(strafe) > 0.01 && !warpPhase) { tmp.set(1, 0, 0).applyQuaternion(ship.quaternion); ship.position.addScaledVector(tmp, strafe * dt); }
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
-    orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
+    const enclosureRadius = Math.max(0.72, (focus?.item?.size || 0) * 0.5 + 0.12);
+    const approach = focus ? THREE.MathUtils.clamp(1 - (ship.position.distanceTo(focus.pos) - enclosureRadius * 2) / 8, 0, 1) : 0;
+    const enclosureScale = THREE.MathUtils.lerp(1, enclosureRadius / 0.72, approach);
+    orb.position.y = Math.sin(t * 0.9) * 0.03 * (1 - approach);
+    orb.rotation.y = t * 0.05;
+    orb.scale.setScalar(Math.max(enclosureScale, 1 + Math.max(0, camDist - 6.5) * 0.06));
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
+    orbSurface.update(dt, qBill);
+    const absorbed = orbSurface.star, absorption = orbSurface.amount;
+    orbGlow.material.opacity = 0.16 * (1 - absorption);
+    if (absorbed) stars.mat.uniforms.absorbedPosition.value.fromArray(stars.pos, absorbed.index * 3);
+    stars.mat.uniforms.absorption.value = absorbed && ship.position.distanceTo(absorbed.pos) < 0.72 * orb.scale.x ? 1 : 0;
+    if (focus && !auto) reticle.material.opacity = (focus.item ? 0 : 0.9) * (1 - absorption);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
     if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
-    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
-      const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
+    orb.getWorldPosition(v3);
+    for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T);
+      m.position.copy(it.pos);
+      const s = it.size * (m === hot && it !== focus?.item ? 1.12 : 1);
+      m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
+      const dc = m.position.distanceTo(camP);
+      const enclosed = it === absorbed?.item && m.position.distanceTo(v3) + m.scale.x * 0.502 < 0.72 * orb.scale.x;
+      const fade = enclosed ? 0 : Math.max(0, Math.min(1, (dc - 2) / 3));
+      m.material.opacity = 0.96 * fade; m.userData.shade.material.opacity = enclosed ? 0 : 1;
+      m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade;
+      m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
     if (reticle.material.opacity > 0) { reticle.material.rotation = t * 0.6; const rd = reticle.position.distanceTo(camP); reticle.scale.setScalar(0.06 * rd + 0.6); }
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
     if (frame % 2 === 0) { orb.visible = false; streaks.visible = false; cubeCam.position.copy(orb.getWorldPosition(v3)); cubeCam.update(renderer, scene); orb.visible = true; streaks.visible = warp > 0.001; }
     renderer.render(scene, camera);
     if (focus && !auto) {
-      v3.copy(focus.pos).project(camera);
-      const distance = focus.pos.distanceTo(camP);
-      const radius = Math.max(24, Math.min(160, (focus.item?.size || 0.4) * innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360) * Math.max(0.1, distance)) + 10));
+      orb.getWorldPosition(v3);
+      tmp.copy(v3).applyMatrix4(camera.matrixWorldInverse);
+      v3.project(camera);
+      // Frame the navigation orb, not the dataset behind it. A conservative sphere bound keeps every glyph outside its silhouette.
+      const depth = -tmp.z, worldRadius = 0.74 * orb.scale.x;
+      const focalLength = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
+      const radius = focalLength * worldRadius / Math.max(0.1, depth - worldRadius) * (1 + Math.hypot(tmp.x, tmp.y) / Math.max(0.1, depth));
       placeSelection((v3.x * 0.5 + 0.5) * innerWidth, (-v3.y * 0.5 + 0.5) * innerHeight, radius, v3.z > -1 && v3.z < 1 && Math.abs(v3.x) < 1 && Math.abs(v3.y) < 1);
     }
     if (frame % 3 === 0) { placeLabels(); updateReadout(); }
