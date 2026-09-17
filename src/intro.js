@@ -8,7 +8,7 @@ const CSS = `
 .uo-intro canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
 .uo-intro .entry-layout{box-sizing:border-box;min-height:100%;min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding:max(28px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left))}
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
-.uo-intro .entry-brand{display:block;width:132px;height:auto;filter:invert(1)}
+.uo-intro .entry-brand{display:block;width:104px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
 .uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.2em;text-indent:.2em;margin:0;text-wrap:balance}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
