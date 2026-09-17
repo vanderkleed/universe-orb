@@ -9,6 +9,7 @@ import { HAZE, DOT, RING } from "./textures.js";
 import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
 import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
+import { createOrbSurface } from "./orb-surface.js";
 
 const $ = id => document.getElementById(id);
 function setDestination(destination) {
@@ -50,6 +51,7 @@ async function boot() {
   const cubeCam = new THREE.CubeCamera(0.3, 900, cubeRT); scene.add(cubeCam);
   const orb = new THREE.Mesh(new THREE.SphereGeometry(0.72, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.05, envMap: cubeRT.texture, envMapIntensity: 1.25 }));
   ship.add(orb);
+  const orbSurface = createOrbSurface(orb, reduce);
   orb.add(new THREE.Mesh(new THREE.SphereGeometry(0.74, 64, 64), new THREE.MeshBasicMaterial({ color: 0xF4F2EC, transparent: true, opacity: 0.1, side: THREE.BackSide, depthWrite: false })));
   const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: DOT, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending })); orbGlow.scale.setScalar(4.2); orb.add(orbGlow);
   scene.add(new THREE.AmbientLight(0xF4F2EC, 0.22)); const key = new THREE.DirectionalLight(0xF4F2EC, 0.45); key.position.set(3, 5, 4); scene.add(key);
@@ -113,7 +115,7 @@ async function boot() {
   function finishArrival() {
     if (!destination) return;
     document.body.classList.remove("in-transit");
-    if (focus) showSelection(focus);
+    if (focus) { orbSurface.arrive(); showSelection(focus); }
     destination = null;
   }
   function release(closeToo) {
@@ -121,6 +123,7 @@ async function boot() {
     destination = null;
     document.body.classList.remove("in-transit");
     clearSelection();
+    orbSurface.leave();
     if (focus && closeToo) audio.play.close();
     focus = null; reticle.material.opacity = 0;
   }
@@ -141,7 +144,7 @@ async function boot() {
     if (!nameOf(manifest, galaxy, j)) { const { shardFor, loadShard } = await import("./data.js"); const s = shardFor(manifest, galaxy, j); if (s?.file) await loadShard(s.file); }
     if (requested !== selection) return;
     const star = starRecord(index); if (!star.slug) return;
-    focus = star; activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
+    focus = star; orbSurface.prepare(star); activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
     beginArrival(prettyName(star.slug));
     flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
@@ -406,10 +409,20 @@ async function boot() {
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
     orb.position.y = Math.sin(t * 0.9) * 0.03; orb.rotation.y = t * 0.05; orb.scale.setScalar(1 + Math.max(0, camDist - 6.5) * 0.06);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
+    orbSurface.update(dt, qBill);
+    const absorbed = orbSurface.star, absorption = orbSurface.amount;
+    orbGlow.material.opacity = 0.16 * (1 - absorption);
+    if (absorbed) stars.mat.uniforms.absorbedPosition.value.fromArray(stars.pos, absorbed.index * 3);
+    stars.mat.uniforms.absorption.value = absorption;
+    if (focus && !auto) reticle.material.opacity = (focus.item ? 0 : 0.9) * (1 - absorption);
     if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
     if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
     for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T); m.position.copy(it.pos); const s = it.size * (m === hot ? 1.12 : 1); m.scale.x += (s - m.scale.x) * 0.2; m.scale.y = m.scale.z = m.scale.x;
-      const dc = m.position.distanceTo(camP); const fade = Math.max(0, Math.min(1, (dc - 2) / 3)); m.material.opacity = 0.96 * fade; m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade; m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
+      const dc = m.position.distanceTo(camP); const remaining = it === absorbed?.item ? 1 - absorption : 1;
+      const fade = Math.max(0, Math.min(1, (dc - 2) / 3)) * remaining;
+      m.material.opacity = 0.96 * fade; m.userData.shade.material.opacity = remaining;
+      m.userData.edge.material.opacity = ((m === hot || (focus && focus.item === it)) ? 0.9 : 0.2) * fade;
+      m.userData.glow.material.opacity = 0.32 * Math.min(1, dc / 60) * fade; }
     domains.forEach(k => { const G = galaxies[k]; const dd = ship.position.distanceTo(G.center); G.haze.material.opacity = 0.2 * Math.max(0.15, Math.min(1, (dd - G.radius * 0.6) / (G.radius * 1.2))); });
     if (reticle.material.opacity > 0) { reticle.material.rotation = t * 0.6; const rd = reticle.position.distanceTo(camP); reticle.scale.setScalar(0.06 * rd + 0.6); }
     updateStreaks(dt); hover(); audio.update(speed / 25, warp);
