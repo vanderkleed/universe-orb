@@ -47,7 +47,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
     <header class="entry-header"><span class="entry-brand">Roboflow</span><span>A universe of vision</span></header>
-    <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/universe-badge.svg" alt="" width="832" height="387"></div><h1 id="entry-title">Universe</h1>
+    <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">Universe</h1>
       <p class="entry-description">Every point of light is a dataset.<br>Find a world worth exploring.</p>
       <div class="entry-facts"><span role="img" aria-label="${fmt(total)} public datasets"><strong class="entry-count" aria-hidden="true">${fmt(total)}</strong> <span aria-hidden="true">datasets</span></span><span><strong>${fmt(galaxies)}</strong> galaxies</span></div>
       <button type="button" class="entry-button">Enter Universe <span aria-hidden="true">↗</span></button>

@@ -22,7 +22,7 @@ export function createIntroBadge(host, reducedMotion) {
   studio.background = new THREE.Color(0x161616);
   const panelGeometry = new THREE.PlaneGeometry(1, 1);
   const panelMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 5, 5), side: THREE.DoubleSide });
-  for (const [x, y, z, w, h] of [[-5, 3, 5, 3, 10], [5, 1, 3, 2, 8], [0, 6, -2, 12, 3], [0, -4, 4, 10, 1]]) {
+  for (const [x, y, z, w, h] of [[-5, 3, 5, 3, 10], [5, 1, 3, 2, 8], [0, 6, -2, 12, 3], [0, -4, 4, 10, 1], [-1, 2, 7, 3, 6], [0, -6, -2, 8, 2]]) {
     const panel = new THREE.Mesh(panelGeometry, panelMaterial);
     panel.position.set(x, y, z); panel.scale.set(w, h, 1); panel.lookAt(0, 0, 0); studio.add(panel);
   }
@@ -34,7 +34,8 @@ export function createIntroBadge(host, reducedMotion) {
   const edge = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 1, roughness: .13, envMapIntensity: 1.5 });
   const badge = new THREE.Group(); scene.add(badge);
   const geometries = [];
-  const paths = new SVGLoader().parse(badgeSvg).paths;
+  // Keep the original vector logomark, not the flat orbit wings or foreground stroke.
+  const paths = new SVGLoader().parse(badgeSvg).paths.filter(path => path.userData.node.closest("g[clip-path]"));
   for (const path of paths) {
     const style = path.userData.style;
     if (style.fill && style.fill !== "none" && (!style.stroke || style.stroke === "none")) {
@@ -53,14 +54,23 @@ export function createIntroBadge(host, reducedMotion) {
       geometry.computeVertexNormals(); geometries.push(geometry);
       badge.add(new THREE.Mesh(geometry, [face, edge]));
     }
-    if (style.stroke && style.stroke !== "none") {
-      for (const subPath of path.subPaths) {
-        const points = subPath.getPoints(64).map(p => new THREE.Vector3((p.x - 416) * .01, (193.5 - p.y) * .01, .24));
-        const geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 96, Number(style.strokeWidth) * .005, 12, false);
-        geometries.push(geometry); badge.add(new THREE.Mesh(geometry, face));
-      }
-    }
   }
+  const discShape = new THREE.Shape();
+  discShape.absarc(0, 0, 4.25, 0, Math.PI * 2, false);
+  const aperture = new THREE.Path();
+  aperture.absarc(0, 0, 2.65, 0, Math.PI * 2, true);
+  discShape.holes.push(aperture);
+  const discGeometry = new THREE.ExtrudeGeometry(discShape, {
+    depth: .1, bevelEnabled: true, bevelThickness: .025, bevelSize: .035,
+    bevelSegments: 3, curveSegments: 96, steps: 1,
+  });
+  discGeometry.translate(0, 0, -.05);
+  geometries.push(discGeometry);
+  const disc = new THREE.Mesh(discGeometry, [face, edge]);
+  // Real depth keeps the entire mark unobstructed even as the badge gently turns.
+  disc.rotation.set(1.02, 0, .25, "ZYX");
+  disc.position.set(0, -.5, -3.9);
+  badge.add(disc);
   let disposed = false;
   function render(seconds = 0) {
     if (disposed || document.hidden) return;
