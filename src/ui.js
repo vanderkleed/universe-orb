@@ -88,6 +88,9 @@ export function placeSelection(x, y, radius, visible) {
   if (orbitRadius !== r) {
     orbitRadius = r;
     const menuRadius = r + 52, extent = menuRadius + 28;
+    $("orbit-menu-band").setAttribute("r", menuRadius);
+    $("orbit-menu-inner").setAttribute("r", menuRadius - 22);
+    $("orbit-menu-outer").setAttribute("r", menuRadius + 22);
     el.style.setProperty("--orbit-size", `${extent * 2}px`);
     el.querySelectorAll("svg").forEach(svg => svg.setAttribute("viewBox", `${-extent} ${-extent} ${extent * 2} ${extent * 2}`));
     $("selection-name-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 1 ${r} 0`);
