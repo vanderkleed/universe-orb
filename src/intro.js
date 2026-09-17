@@ -1,4 +1,6 @@
-// Universe title sequence — self-contained, no dependencies.
+import { createIntroBadge } from "./intro-badge.js";
+
+// Universe title sequence — self-contained.
 // Mounts above the scene; the visitor starts the arrival flight with Enter Universe.
 const CSS = `
 .uo-intro{position:fixed;inset:0;z-index:1000;background:var(--ground);color:var(--ink);overflow:auto;transition:opacity .65s ease;isolation:isolate}
@@ -10,6 +12,10 @@ const CSS = `
 .uo-intro .entry-header span:last-child{font:14px/1.5 var(--mono)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
 .uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.16em;text-indent:.16em;margin:0;text-wrap:balance}
+.uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
+.uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
+.uo-intro .entry-badge canvas{z-index:0}
+.uo-intro .entry-badge.badge-ready img{opacity:0}
 .uo-intro .entry-description{font:400 clamp(16px,2vw,20px)/1.5 var(--sans);color:var(--mute);max-width:30ch;margin:0;text-wrap:balance}
 .uo-intro .entry-button{font:500 16px/1.5 var(--sans);background:var(--ink);color:var(--ground);border:1px solid var(--ink);border-radius:8px;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer;transition:background .2s,color .2s}
 .uo-intro .entry-button:hover{background:var(--ground);color:var(--ink)}
@@ -21,7 +27,8 @@ const CSS = `
 @media(max-width:720px){
  .uo-intro .entry-layout{padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
  .uo-intro .entry-header{gap:12px}.uo-intro .entry-header span:last-child{font-family:var(--sans)}
- .uo-intro .entry-center{gap:24px;padding:48px 0}
+ .uo-intro .entry-center{gap:24px;padding:28px 0}
+ .uo-intro .entry-badge{height:clamp(140px,23svh,210px)}
  .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.12em;text-indent:.12em}
  .uo-intro .entry-description{max-width:25ch}.uo-intro .entry-button{min-width:220px}
  .uo-intro .entry-footer{flex-direction:column;gap:8px;justify-content:center;text-align:center}.uo-intro .entry-desktop-hint{display:none}.uo-intro .entry-mobile-hint{display:inline}
@@ -40,7 +47,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
     <header class="entry-header"><span class="entry-brand">Roboflow</span><span>A universe of vision</span></header>
-    <div class="entry-center"><h1 id="entry-title">Universe</h1>
+    <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/universe-badge.svg" alt="" width="832" height="387"></div><h1 id="entry-title">Universe</h1>
       <p class="entry-description">Every point of light is a dataset.<br>Find a world worth exploring.</p>
       <div class="entry-facts"><span role="img" aria-label="${fmt(total)} public datasets"><strong class="entry-count" aria-hidden="true">${fmt(total)}</strong> <span aria-hidden="true">datasets</span></span><span><strong>${fmt(galaxies)}</strong> galaxies</span></div>
       <button type="button" class="entry-button">Enter Universe <span aria-hidden="true">↗</span></button>
@@ -54,6 +61,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   mount.appendChild(root);
   const button = root.querySelector("button"), counter = root.querySelector(".entry-count");
   const canvas = root.querySelector("canvas"), context = canvas.getContext("2d");
+  const badge = createIntroBadge(root.querySelector(".entry-badge"), reduce);
   let width = 0, height = 0, raf = 0, started = null, finished = false, timer = 0;
   // Polar positions survive a viewport rotation without respawning the field.
   const stars = Array.from({ length: matchMedia("(max-width:720px)").matches ? 420 : 900 }, () => ({
@@ -64,6 +72,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
     if (!context) return;
     if (started === null) started = time;
     const seconds = reduce ? 4 : (time - started) / 1000;
+    badge.update(seconds);
     context.clearRect(0, 0, width, height);
     const color = getComputedStyle(root).color;
     context.fillStyle = color;
@@ -90,7 +99,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   }
   function cleanup() {
     cancelAnimationFrame(raf); clearTimeout(timer); removeEventListener("resize", size);
-    root.remove(); restore();
+    badge.dispose(); root.remove(); restore();
     document.getElementById("gl")?.focus({ preventScroll: true });
   }
   function enter() {
