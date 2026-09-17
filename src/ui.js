@@ -87,17 +87,26 @@ export function placeSelection(x, y, radius, visible) {
   const r = Math.ceil(Math.max(86, radius + 36));
   if (orbitRadius !== r) {
     orbitRadius = r;
-    const menuRadius = r + 52, extent = menuRadius + 28;
+    const menuRadius = r + 52, extent = menuRadius + 48;
     $("orbit-menu-band").setAttribute("r", menuRadius);
-    $("orbit-menu-inner").setAttribute("r", menuRadius - 22);
-    $("orbit-menu-outer").setAttribute("r", menuRadius + 22);
+    $("orbit-menu-inner").setAttribute("r", menuRadius - 28);
+    $("orbit-menu-outer").setAttribute("r", menuRadius + 28);
+    const polar = (radius, degrees) => `${radius * Math.cos(degrees * Math.PI / 180)} ${radius * Math.sin(degrees * Math.PI / 180)}`;
+    $("orbit-reticle").setAttribute("d", [0, 90, 180, 270].flatMap(angle => [
+      `M ${polar(menuRadius + 31, angle)} L ${polar(menuRadius + 43, angle)}`,
+      ...[-4, 4].map(offset => `M ${polar(menuRadius + 31, angle + offset)} L ${polar(menuRadius + 36, angle + offset)}`),
+    ]).join(" "));
+    $("orbit-menu-dividers").setAttribute("d", [9, 63, 117, 171].map(angle =>
+      `M ${polar(menuRadius - 13, angle)} L ${polar(menuRadius + 13, angle)}`
+    ).join(" "));
     el.style.setProperty("--orbit-size", `${extent * 2}px`);
     el.querySelectorAll("svg").forEach(svg => svg.setAttribute("viewBox", `${-extent} ${-extent} ${extent * 2} ${extent * 2}`));
-    $("selection-name-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 1 ${r} 0`);
-    $("selection-by-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 0 ${r} 0`);
+    const nameRadius = menuRadius + 5, byRadius = menuRadius - 16;
+    $("selection-name-path").setAttribute("d", `M ${-nameRadius} 0 A ${nameRadius} ${nameRadius} 0 0 1 ${nameRadius} 0`);
+    $("selection-by-path").setAttribute("d", `M ${-byRadius} 0 A ${byRadius} ${byRadius} 0 0 1 ${byRadius} 0`);
     const font = getComputedStyle(el).fontFamily;
-    $("selection-name").textContent = fitOrbitText(prettyName(selected.slug).toUpperCase(), Math.PI * r * .9, `16px ${font}`, 2.8);
-    $("selection-by").textContent = fitOrbitText(("by " + prettyWs(selected.slug)).toUpperCase(), Math.PI * r * .8, `14px ${font}`, 2);
+    $("selection-name").textContent = fitOrbitText(prettyName(selected.slug).toUpperCase(), Math.PI * nameRadius * .82, `16px ${font}`, 2.8);
+    $("selection-by").textContent = fitOrbitText(("by " + prettyWs(selected.slug)).toUpperCase(), Math.PI * byRadius * .76, `14px ${font}`, 2);
     ["details", "open", "leave"].forEach((action, index) => {
       const angle = 144 - index * 54, half = 23;
       const point = degrees => `${menuRadius * Math.cos(degrees * Math.PI / 180)} ${menuRadius * Math.sin(degrees * Math.PI / 180)}`;

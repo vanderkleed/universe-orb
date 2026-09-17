@@ -207,8 +207,9 @@ body:not(.exploration-open) .hint{display:none}
 .orbit-by{font-size:14px;letter-spacing:2px;fill:var(--mute)}
 .selection-actions{position:absolute;left:var(--orb-x,50%);top:var(--orb-y,50%);width:var(--orbit-size,332px);height:var(--orbit-size,332px);transform:translate(-50%,-50%);pointer-events:none}
 .orbit-menu-backing{pointer-events:none}
-.orbit-menu-band{fill:none;stroke:var(--ground);stroke-width:44px}
+.orbit-menu-band{fill:none;stroke:var(--ground);stroke-width:56px}
 .orbit-menu-edge{fill:none;stroke:var(--hair);stroke-width:1px}
+.orbit-reticle{fill:none;stroke:var(--mute);stroke-width:1px;pointer-events:none}
 .orbit-action{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;background:transparent;color:var(--ink);pointer-events:none;outline:none}
 .orbit-action svg{display:block;width:100%;height:100%;overflow:visible}
 .orbit-action-track{fill:none;stroke:transparent;stroke-width:44px;pointer-events:stroke;cursor:pointer}
