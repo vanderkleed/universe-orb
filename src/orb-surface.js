@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { thumbUrl } from "./data.js";
 
-export function createOrbSurface(orb, reducedMotion) {
+export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
   const loader = new THREE.TextureLoader().setCrossOrigin("anonymous");
   const uniforms = {
     cover: { value: null },
@@ -11,12 +11,13 @@ export function createOrbSurface(orb, reducedMotion) {
     contactAge: { value: -1 },
     settleAge: { value: -1 },
     motion: { value: reducedMotion ? 0 : 1 },
+    peeling: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
     depthWrite: true,
     vertexShader: `
-      uniform float progress, contactAge, settleAge, motion;
+      uniform float progress, contactAge, settleAge, motion, peeling;
       varying vec3 surface;
       varying vec3 viewPosition;
       varying float wrapDistance;
@@ -25,9 +26,10 @@ export function createOrbSurface(orb, reducedMotion) {
         float angle = atan(surface.y, surface.x);
         float wave = sin(angle * 3.0 + progress * 5.0) * 0.045 * (1.0 - surface.z * surface.z);
         float front = mix(-0.12, 1.16, progress);
-        wrapDistance = front - surface.z - wave;
+        float peelAxis = dot(surface, normalize(vec3(-0.85, -0.1, 0.52)));
+        wrapDistance = mix(front - surface.z - wave, mix(-1.12, 1.12, progress) - peelAxis - wave * 0.4, peeling);
         float moving = sin(progress * 3.14159265) * motion;
-        float lip = exp(-pow(wrapDistance / 0.055, 2.0)) * 0.024 * moving;
+        float lip = exp(-pow(wrapDistance / 0.055, 2.0)) * mix(0.024, 0.04, peeling) * moving;
         float ripple = 0.0;
         if (contactAge >= 0.0 && contactAge < 0.9) {
           float waveDistance = acos(clamp(surface.z, -1.0, 1.0)) - (1.65 - contactAge * 2.0);
@@ -50,7 +52,7 @@ export function createOrbSurface(orb, reducedMotion) {
       uniform sampler2D cover;
       uniform bool hasCover;
       uniform vec2 aspect;
-      uniform float progress, contactAge, settleAge, motion;
+      uniform float progress, contactAge, settleAge, motion, peeling;
       varying vec3 surface;
       varying vec3 viewPosition;
       varying float wrapDistance;
@@ -106,6 +108,7 @@ export function createOrbSurface(orb, reducedMotion) {
       resetTexture();
       current = star;
       departing = false;
+      uniforms.peeling.value = 0;
       amount = 0;
       target = 0;
       uniforms.contactAge.value = -1;
@@ -126,15 +129,18 @@ export function createOrbSurface(orb, reducedMotion) {
     contact(progress) { target = THREE.MathUtils.clamp(progress, 0, 1); },
     arrive() { target = 1; },
     get ready() { return ready; },
+    peel(progress) { if (departing) target = THREE.MathUtils.clamp(progress, 0, 1); },
     leave() {
       ++request; target = 0; departing = true;
+      uniforms.peeling.value = 1;
       uniforms.contactAge.value = -1;
       uniforms.settleAge.value = -1;
     },
     update(dt, cameraRotation) {
       const goal = ready ? target : 0;
       const previous = amount;
-      amount = reducedMotion || !departing ? goal : THREE.MathUtils.clamp(amount - dt / 1.9, 0, 1);
+      amount = goal;
+      if (!departing && previous === 0 && amount > 0) onContact();
       if (!reducedMotion && !departing) {
         if (previous === 0 && amount > 0) uniforms.contactAge.value = 0;
         if (previous < 1 && amount === 1) uniforms.settleAge.value = 0;

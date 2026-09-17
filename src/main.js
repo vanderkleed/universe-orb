@@ -51,7 +51,7 @@ async function boot() {
   const cubeCam = new THREE.CubeCamera(0.3, 900, cubeRT); scene.add(cubeCam);
   const orb = new THREE.Mesh(new THREE.SphereGeometry(0.72, 96, 96), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.05, envMap: cubeRT.texture, envMapIntensity: 1.25 }));
   ship.add(orb);
-  const orbSurface = createOrbSurface(orb, reduce);
+  const orbSurface = createOrbSurface(orb, reduce, () => audio.play.contact());
   orb.add(new THREE.Mesh(new THREE.SphereGeometry(0.74, 64, 64), new THREE.MeshBasicMaterial({ color: 0xF4F2EC, transparent: true, opacity: 0.1, side: THREE.BackSide, depthWrite: false })));
   const orbGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: DOT, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending })); orbGlow.scale.setScalar(4.2); orb.add(orbGlow);
   scene.add(new THREE.AmbientLight(0xF4F2EC, 0.22)); const key = new THREE.DirectionalLight(0xF4F2EC, 0.45); key.position.set(3, 5, 4); scene.add(key);
@@ -72,7 +72,9 @@ async function boot() {
   /* ---------- flight ---------- */
   let yaw = 0.4, pitch = 0, tYaw = 0.4, tPitch = 0, roll = 0, tRoll = 0, yawVel = 0, speed = 0, thrust = 0, strafe = 0;
   const CRUISE = reduce ? 0 : 0.5, JUMP = 110;
-  let auto = null;
+  let auto = null, departure = null, queuedFlight = null;
+  function afterDeparture(action) { if (departure) queuedFlight = action; else action(); }
+  let previousSpeed = 0, inertia = 0, inertiaVelocity = 0;
   const fwd = new THREE.Vector3(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), v3 = new THREE.Vector3();
   const headingTo = vv => { const len = vv.length() || 1; return { yaw: Math.atan2(-vv.x, -vv.z), pitch: Math.asin(Math.max(-1, Math.min(1, vv.y / len))) }; };
   const wrap = a => { while (a > Math.PI) a -= 6.283185; while (a < -Math.PI) a += 6.283185; return a; };
@@ -80,6 +82,7 @@ async function boot() {
   // right axis, so after a spin the controls still mean what the pilot sees (rolled 180°, left is left)
   const steer = (h, v) => { const c = Math.cos(roll), s = Math.sin(roll); tYaw += h * c + v * s; tPitch = Math.max(-1.3, Math.min(1.3, tPitch + v * c - h * s)); };
   function flyTo(P, standoff) {
+    if (departure) { const next = P.clone(); queuedFlight = () => flyTo(next, standoff); return; }
     auto = { target: P.clone(), standoff }; tCamDist = 6.5;
     const dist = P.distanceTo(ship.position);
     if (reduce) {
@@ -119,6 +122,15 @@ async function boot() {
     destination = null;
   }
   function release(closeToo) {
+    queuedFlight = null;
+    const leaving = focus && orbSurface.amount > 0 ? focus : null;
+    if (leaving) {
+      const radius = 0.72 * Math.max(orb.scale.x, orb.scale.y, orb.scale.z);
+      departure = { star: leaving, elapsed: 0, amount: orbSurface.amount, scale: radius / 0.72,
+        start: ship.position.clone(), origin: leaving.pos.clone(),
+        travel: new THREE.Vector3(0.85, 0.1, 1).normalize().applyQuaternion(ship.quaternion)
+          .multiplyScalar(radius + (leaving.item?.size || 0) * 0.5 + 1.4) };
+    }
     selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
     destination = null;
     document.body.classList.remove("in-transit");
@@ -143,13 +155,16 @@ async function boot() {
     // make sure its name shard is in before opening the drawer
     if (!nameOf(manifest, galaxy, j)) { const { shardFor, loadShard } = await import("./data.js"); const s = shardFor(manifest, galaxy, j); if (s?.file) await loadShard(s.file); }
     if (requested !== selection) return;
-    const star = starRecord(index); if (!star.slug) return;
-    focus = star; orbSurface.prepare(star); activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
-    beginArrival(prettyName(star.slug));
-    flyTo(star.pos, 0);
-    reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
-    tag.hide(); audio.play.select();
-    setDestination(star.slug);
+    afterDeparture(() => {
+      if (requested !== selection) return;
+      const star = starRecord(index); if (!star.slug) return;
+      focus = star; orbSurface.prepare(star); activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
+      beginArrival(prettyName(star.slug));
+      flyTo(star.pos, 0);
+      reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
+      tag.hide(); audio.play.select();
+      setDestination(star.slug);
+    });
   }
   function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
   function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
@@ -265,7 +280,7 @@ async function boot() {
   canvas.addEventListener("pointermove", e => {
     mouse.x = (e.clientX / innerWidth) * 2 - 1; mouse.y = -(e.clientY / innerHeight) * 2 + 1; mx = e.clientX; my = e.clientY;
     if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
-    if (moved > 6) { canvas.classList.add("dragging"); if (auto || focus) release(); steer(-dx * 0.0038, dy * 0.0032); }
+    if (moved > 6) { canvas.classList.add("dragging"); if (auto || focus || queuedFlight) release(); steer(-dx * 0.0038, dy * 0.0032); }
   });
   canvas.addEventListener("pointerup", e => { dragging = false; canvas.classList.remove("dragging"); if (moved < 6) clickAt(e.clientX, e.clientY); });
   canvas.addEventListener("pointerleave", () => { mouse.set(10, 10); tag.hide(); });
@@ -385,6 +400,16 @@ async function boot() {
       if (auto) auto.target.copy(focus.pos);
       if (!warpPhase) ship.position.add(tmp.copy(focus.pos).sub(prevStar));
       reticle.position.copy(focus.pos); }
+    const peeling = !!departure;
+    if (departure) {
+      const d = departure;
+      d.elapsed = reduce ? 1 : Math.min(1, d.elapsed + dt / 0.85);
+      const ease = d.elapsed * d.elapsed * (3 - 2 * d.elapsed);
+      starNow(d.star.G, d.star.j, T, d.star.pos);
+      ship.position.copy(d.start).add(tmp.copy(d.star.pos).sub(d.origin)).addScaledVector(d.travel, ease);
+      orbSurface.peel(d.amount * (1 - ease));
+      speed = thrust = strafe = 0;
+    }
     updateWarp(dt);
     let contactApproach = false;
     if (auto && !warpPhase) {
@@ -418,7 +443,7 @@ async function boot() {
         if (focus) setTimeout(() => hintOnce("h-random", "<kbd>R</kbd> jumps somewhere unexpected"), 2500); }
     }
     const fwdIn = keys.w - keys.s * 0.6, turn = keys.l - keys.r, rollIn = keys.q - keys.e, sideIn = keys.d - keys.a;
-    if ((fwdIn || turn || rollIn || sideIn) && (auto || focus)) release();
+    if ((fwdIn || turn || rollIn || sideIn) && (auto || focus || queuedFlight)) release();
     if (turn) steer(turn * dt * (1.9 - Math.min(1, Math.abs(speed) / 40) * 0.9), 0);
     if (rollIn) tRoll += rollIn * dt * 1.7;
     const manual = fwdIn * 11 * (keys.boost ? 3.5 : 1);
@@ -426,25 +451,41 @@ async function boot() {
     ship.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, roll, "YXZ"));
     camRig.rotation.z += ((-yawVel * 0.1) - camRig.rotation.z) * Math.min(1, dt * 3);
     const target = manual ? manual : (focus && !auto ? 0 : (auto ? thrust : CRUISE + thrust)); speed += (target - speed) * Math.min(1, dt * (target < speed ? 5 : 2.2)); if (!auto) thrust += (0 - thrust) * Math.min(1, dt * 0.35);
-    fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase && !contactApproach) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
+    fwd.set(0, 0, -1).applyQuaternion(ship.quaternion); if (!warpPhase && !contactApproach && !peeling) ship.position.addScaledVector(fwd, speed * dt); else speed = 0;
     strafe += (sideIn * 7 * (keys.boost ? 3.5 : 1) - strafe) * Math.min(1, dt * 5);   // A/D slide along the ship's own right axis
-    if (Math.abs(strafe) > 0.01 && !warpPhase) { tmp.set(1, 0, 0).applyQuaternion(ship.quaternion); ship.position.addScaledVector(tmp, strafe * dt); }
+    if (Math.abs(strafe) > 0.01 && !warpPhase && !peeling) { tmp.set(1, 0, 0).applyQuaternion(ship.quaternion); ship.position.addScaledVector(tmp, strafe * dt); }
     const rr = ship.position.length(); if (rr > WORLD * 1.9) ship.position.multiplyScalar(WORLD * 1.9 / rr);
     camDist += (tCamDist - camDist) * Math.min(1, dt * 3); camera.position.set(0, 0.9 + camDist * 0.12, camDist); camera.up.set(0, 1, 0).applyQuaternion(camRig.getWorldQuaternion(qBill)); camera.lookAt(camRig.localToWorld(v3.set(0, camDist * 0.03, -camDist * 0.5)));
     const enclosureRadius = Math.max(0.72, (focus?.item?.size || 0) * 0.5 + 0.12);
     const approach = focus ? THREE.MathUtils.clamp(1 - (ship.position.distanceTo(focus.pos) - enclosureRadius * 2) / 8, 0, 1) : 0;
     const enclosureScale = THREE.MathUtils.lerp(1, enclosureRadius / 0.72, approach);
-    orb.position.y = Math.sin(t * 0.9) * 0.03 * (1 - approach);
-    orb.rotation.y = t * 0.05;
-    orb.scale.setScalar(Math.max(enclosureScale, 1 + Math.max(0, camDist - 6.5) * 0.06));
+    const acceleration = (speed - previousSpeed) / Math.max(dt, 0.001);
+    previousSpeed = speed;
+    const inertialTarget = reduce || contactApproach || peeling || warpPhase ? 0 : THREE.MathUtils.clamp(acceleration / 100, -0.045, 0.065) * (1 - approach);
+    // Analytic critically damped spring: stable across frame rates, with no simulation or allocations.
+    const displacement = inertia - inertialTarget, spring = inertiaVelocity + 14 * displacement, decay = Math.exp(-14 * dt);
+    inertia = inertialTarget + (displacement + spring * dt) * decay;
+    inertiaVelocity = (inertiaVelocity - 14 * spring * dt) * decay;
+    if (reduce) inertia = inertiaVelocity = 0;
+    const stretch = 1 + inertia, transverse = 1 / Math.sqrt(stretch);
+    const peelScale = departure ? THREE.MathUtils.lerp(departure.scale, 1, departure.elapsed * departure.elapsed * (3 - 2 * departure.elapsed)) : 1;
+    const baseScale = Math.max(enclosureScale, peelScale, 1 + Math.max(0, camDist - 6.5) * 0.06);
+    orb.position.y = reduce || peeling ? 0 : Math.sin(t * 0.9) * 0.03 * (1 - approach);
+    orb.rotation.y = 0;
+    orb.scale.set(baseScale * transverse, baseScale * transverse, baseScale * stretch);
     camera.getWorldQuaternion(qBill); const camP = camera.getWorldPosition(tmp2);
     orbSurface.update(dt, qBill);
+    if (departure?.elapsed === 1) {
+      departure = null;
+      const next = queuedFlight; queuedFlight = null;
+      if (next) next();
+    }
     const absorbed = orbSurface.star, absorption = orbSurface.amount;
     orbGlow.material.opacity = 0.16 * (1 - absorption);
     if (absorbed) stars.mat.uniforms.absorbedPosition.value.fromArray(stars.pos, absorbed.index * 3);
     stars.mat.uniforms.absorption.value = absorbed && ship.position.distanceTo(absorbed.pos) < 0.72 * orb.scale.x ? 1 : 0;
     if (focus && !auto) reticle.material.opacity = (focus.item ? 0 : 0.9) * (1 - absorption);
-    if (frame % 8 === 0) planets.assign(ship.position, focus?.item || null);
+    if (frame % 8 === 0) planets.assign(ship.position, focus?.item || departure?.star.item || null);
     if (frame % 30 === 5) pickComets(); if (comets.visible) updateComets();
     orb.getWorldPosition(v3);
     for (const m of planets.active()) { m.quaternion.copy(qBill); const it = m.userData.item; planets.update(it, T);
