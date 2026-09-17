@@ -18,10 +18,10 @@ const CSS = `
 .uo-intro .entry-badge.badge-ready img{opacity:0}
 .uo-intro .entry-description{font:400 clamp(16px,2vw,20px)/1.5 var(--sans);color:var(--mute);max-width:30ch;margin:0;text-wrap:balance}
 .uo-intro .entry-button{position:relative;font:500 16px/1.5 var(--sans);background:transparent;color:var(--ink);border:0;border-radius:0;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer}
-.uo-intro .entry-button-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:transparent;stroke:currentColor;stroke-width:1;transition:fill .2s}
+.uo-intro .entry-button-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:transparent;stroke:currentColor;stroke-width:.75;transition:fill .2s}
 .uo-intro .entry-button:hover .entry-button-frame{fill:var(--hair)}
 .uo-intro .entry-button:focus-visible{outline:none}
-.uo-intro .entry-button:focus-visible .entry-button-frame{stroke-width:3}
+.uo-intro .entry-button:focus-visible .entry-button-frame{stroke-width:1;fill:var(--hair)}
 .uo-intro .entry-facts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;font:14px/1.5 var(--mono);color:var(--mute)}
 .uo-intro .entry-facts strong{font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums}
 .uo-intro .entry-count{display:inline-block;min-width:7ch;text-align:right}
