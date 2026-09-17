@@ -397,10 +397,17 @@ async function boot() {
       let arrived = remain <= 0.4;
       if (contactApproach) {
         // The dataset stays in its orbit. Only the mirror advances, all the way to the shared center.
-        const step = Math.min(dist, contactDistance / 1.9 * dt);
-        const allowedStep = orbSurface.ready ? step : Math.min(step, Math.max(0, dist - contactDistance));
-        if (dist > 0) ship.position.addScaledVector(tmp, allowedStep / dist);
-        const remainingDistance = dist - allowedStep;
+        let remainingDistance;
+        if (orbSurface.ready) {
+          auto.contact ??= { elapsed: 0, startDistance: dist };
+          auto.contact.elapsed = Math.min(1, auto.contact.elapsed + dt / 0.95);
+          const remaining = auto.contact.startDistance * Math.pow(1 - auto.contact.elapsed, 3);
+          remainingDistance = Math.min(dist, remaining);
+        } else {
+          remainingDistance = Math.max(contactDistance, dist - contactDistance * 3 * dt);
+          remainingDistance = Math.min(dist, remainingDistance);
+        }
+        if (dist > 0) ship.position.addScaledVector(tmp, (dist - remainingDistance) / dist);
         orbSurface.contact(1 - remainingDistance / contactDistance);
         thrust = 0; speed = 0; strafe = 0;
         arrived = remainingDistance <= 0.001;
