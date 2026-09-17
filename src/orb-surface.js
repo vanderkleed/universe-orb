@@ -11,13 +11,12 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
     contactAge: { value: -1 },
     settleAge: { value: -1 },
     motion: { value: reducedMotion ? 0 : 1 },
-    peeling: { value: 0 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
     depthWrite: true,
     vertexShader: `
-      uniform float progress, contactAge, settleAge, motion, peeling;
+      uniform float progress, contactAge, settleAge, motion;
       varying vec3 surface;
       varying vec3 viewPosition;
       varying float wrapDistance;
@@ -26,10 +25,9 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
         float angle = atan(surface.y, surface.x);
         float wave = sin(angle * 3.0 + progress * 5.0) * 0.045 * (1.0 - surface.z * surface.z);
         float front = mix(-0.12, 1.16, progress);
-        float peelAxis = dot(surface, normalize(vec3(-0.85, -0.1, 0.52)));
-        wrapDistance = mix(front - surface.z - wave, mix(-1.12, 1.12, progress) - peelAxis - wave * 0.4, peeling);
+        wrapDistance = front - surface.z - wave;
         float moving = sin(progress * 3.14159265) * motion;
-        float lip = exp(-pow(wrapDistance / 0.055, 2.0)) * mix(0.024, 0.04, peeling) * moving;
+        float lip = exp(-pow(wrapDistance / 0.055, 2.0)) * 0.024 * moving;
         float ripple = 0.0;
         if (contactAge >= 0.0 && contactAge < 0.9) {
           float waveDistance = acos(clamp(surface.z, -1.0, 1.0)) - (1.65 - contactAge * 2.0);
@@ -52,7 +50,7 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
       uniform sampler2D cover;
       uniform bool hasCover;
       uniform vec2 aspect;
-      uniform float progress, contactAge, settleAge, motion, peeling;
+      uniform float progress, contactAge, settleAge, motion;
       varying vec3 surface;
       varying vec3 viewPosition;
       varying float wrapDistance;
@@ -93,7 +91,7 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
   shell.visible = false;
   orb.add(shell);
   const parentRotation = new THREE.Quaternion();
-  let request = 0, amount = 0, target = 0, current = null, ready = false, departing = false;
+  let request = 0, amount = 0, target = 0, current = null, ready = false;
 
   function resetTexture() {
     uniforms.cover.value?.dispose();
@@ -107,8 +105,6 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
       const version = ++request;
       resetTexture();
       current = star;
-      departing = false;
-      uniforms.peeling.value = 0;
       amount = 0;
       target = 0;
       uniforms.contactAge.value = -1;
@@ -129,19 +125,23 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
     contact(progress) { target = THREE.MathUtils.clamp(progress, 0, 1); },
     arrive() { target = 1; },
     get ready() { return ready; },
-    peel(progress) { if (departing) target = THREE.MathUtils.clamp(progress, 0, 1); },
     leave() {
-      ++request; target = 0; departing = true;
-      uniforms.peeling.value = 1;
+      ++request;
+      target = amount = 0;
+      current = null;
+      ready = false;
+      shell.visible = false;
+      uniforms.progress.value = 0;
       uniforms.contactAge.value = -1;
       uniforms.settleAge.value = -1;
+      resetTexture();
     },
     update(dt, cameraRotation) {
       const goal = ready ? target : 0;
       const previous = amount;
       amount = goal;
-      if (!departing && previous === 0 && amount > 0) onContact();
-      if (!reducedMotion && !departing) {
+      if (previous === 0 && amount > 0) onContact();
+      if (!reducedMotion) {
         if (previous === 0 && amount > 0) uniforms.contactAge.value = 0;
         if (previous < 1 && amount === 1) uniforms.settleAge.value = 0;
         if (uniforms.contactAge.value >= 0) uniforms.contactAge.value = Math.min(0.9, uniforms.contactAge.value + dt);
@@ -152,12 +152,6 @@ export function createOrbSurface(orb, reducedMotion, onContact = () => {}) {
       // Keep photographs upright while the mirror and flight rig turn independently.
       orb.getWorldQuaternion(parentRotation);
       shell.quaternion.copy(parentRotation.invert()).multiply(cameraRotation);
-      if (amount === 0 && departing) {
-        resetTexture();
-        current = null;
-        ready = false;
-        departing = false;
-      }
     },
     get amount() { return uniforms.progress.value; },
     get star() { return current; },
