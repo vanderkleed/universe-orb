@@ -25,7 +25,12 @@ export function makeScanPool(n) {
 export const readout = {
   last: null,
   set(key, name, meta) { const k = key + name + meta; if (k === this.last) return; this.last = k; $("ro-k").textContent = key; $("ro-name").textContent = name; $("ro-meta").innerHTML = meta; },
-  range(v) { $("rng").textContent = v; }, sector(v) { $("sec").textContent = v; },
+  range(v) { $("rng").textContent = v; },
+  sector(v) {
+    $("sec").textContent = v;
+    const location = selected ? (selected.galaxy === "Uncharted" ? "Interstellar" : selected.galaxy) : v;
+    if ($("location-name").textContent !== location) $("location-name").textContent = location;
+  },
 };
 export const tag = {
   el: $("tag"),
@@ -41,15 +46,25 @@ export function setExploration(open) {
 }
 $("explore-toggle").addEventListener("click", () => setExploration(!document.body.classList.contains("exploration-open")));
 
-let selected = null;
+let selected = null, orbitRadius = null;
 export function showSelection(star) {
   selected = star;
-  $("selection-context").textContent = (star.galaxy === "Uncharted" ? "Interstellar" : star.galaxy) + " / dataset";
-  $("selection-name").textContent = prettyName(star.slug);
-  $("selection-by").textContent = "by " + prettyWs(star.slug);
+  orbitRadius = null;
+  const name = prettyName(star.slug);
+  $("selection-title").textContent = name + " · by " + prettyWs(star.slug);
+  $("selection-details").setAttribute("aria-label", "Details for " + name);
   $("selection").hidden = false;
   document.body.classList.add("has-selection");
 }
+function fitOrbitText(text, length, font) {
+  const context = orbitMeasure.getContext("2d");
+  context.font = font;
+  if (context.measureText(text).width <= length) return text;
+  const characters = Array.from(text);
+  while (characters.length && context.measureText(characters.join("") + "…").width > length) characters.pop();
+  return characters.join("") + "…";
+}
+const orbitMeasure = document.createElement("canvas");
 export function clearSelection() {
   const hadFocus = $("selection").contains(document.activeElement);
   selected = null;
@@ -64,12 +79,20 @@ export function placeSelection(x, y, radius, visible) {
   el.classList.toggle("offscreen", !visible);
   el.style.setProperty("--orb-x", `${x}px`);
   el.style.setProperty("--orb-y", `${y}px`);
-  el.style.setProperty("--orb-size", `${radius * 2}px`);
-  const width = Math.min(280, innerWidth - 32);
-  const right = x + radius + 24;
-  const left = right + width < innerWidth - 24 ? right : x - radius - width - 24;
-  el.style.setProperty("--label-x", `${Math.max(16, Math.min(innerWidth - width - 16, left))}px`);
-  el.style.setProperty("--label-y", `${Math.max(96, Math.min(innerHeight - 220, y - 40))}px`);
+  const r = Math.round(Math.max(94, radius + 22));
+  if (orbitRadius !== r) {
+    orbitRadius = r;
+    const extent = r + 24;
+    el.style.setProperty("--orbit-size", `${extent * 2}px`);
+    $("selection-orbit").setAttribute("viewBox", `${-extent} ${-extent} ${extent * 2} ${extent * 2}`);
+    $("selection-name-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 1 ${r} 0`);
+    $("selection-by-path").setAttribute("d", `M ${-r} 0 A ${r} ${r} 0 0 0 ${r} 0`);
+    const font = getComputedStyle(el).fontFamily;
+    $("selection-name").textContent = fitOrbitText(prettyName(selected.slug), Math.PI * r * .86, `16px ${font}`);
+    $("selection-by").textContent = fitOrbitText("by " + prettyWs(selected.slug), Math.PI * r * .8, `14px ${font}`);
+  }
+  el.style.setProperty("--actions-x", `${Math.max(110, Math.min(innerWidth - 110, x))}px`);
+  el.style.setProperty("--actions-y", `${Math.max(110, Math.min(innerHeight - 72, y + r + 28))}px`);
 }
 $("selection-details").addEventListener("click", () => { if (selected) openDrawer(selected); });
 $("selection-leave").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));

@@ -104,31 +104,22 @@ async function boot() {
 
   /* ---------- focus ---------- */
   // A "star" record: { index (global star index), slug, galaxy, j, lastmod, cover, item (planet item or null) }
-  let focus = null, activeDom = null, selection = 0, destination = null, arrivalTimer = null;
-  function beginArrival(title, context, caption) {
-    clearTimeout(arrivalTimer);
-    destination = { title, context, caption };
-    $("arrival").classList.remove("show");
+  let focus = null, activeDom = null, selection = 0, destination = null;
+  function beginArrival(title) {
+    destination = title;
     setExploration(false);
     document.body.classList.add("in-transit");
-    document.body.classList.remove("arrived");
   }
   function finishArrival() {
     if (!destination) return;
-    $("arrival-title").textContent = destination.title;
-    $("arrival-context").textContent = destination.context;
-    $("arrival-caption").textContent = destination.caption;
     document.body.classList.remove("in-transit");
-    document.body.classList.add("arrived");
     if (focus) showSelection(focus);
-    else $("arrival").classList.add("show");
-    arrivalTimer = setTimeout(() => { $("arrival").classList.remove("show"); document.body.classList.remove("arrived"); }, 6800);
     destination = null;
   }
   function release(closeToo) {
     selection++; auto = null; pendingWarp = null; warpPhase = null; warpRun = null; warp = 0; thrust = 0; speed = 0;
-    destination = null; clearTimeout(arrivalTimer); $("arrival").classList.remove("show");
-    document.body.classList.remove("in-transit", "arrived");
+    destination = null;
+    document.body.classList.remove("in-transit");
     clearSelection();
     if (focus && closeToo) audio.play.close();
     focus = null; reticle.material.opacity = 0;
@@ -151,7 +142,7 @@ async function boot() {
     if (requested !== selection) return;
     const star = starRecord(index); if (!star.slug) return;
     focus = star; activeDom = galaxy; markDom(galaxy === "Uncharted" ? null : galaxy);
-    beginArrival(prettyName(star.slug), `${galaxy} / dataset discovered`, "Every image has a world inside it.");
+    beginArrival(prettyName(star.slug));
     flyTo(star.pos, star.item ? star.item.size * 5 : 3.2);
     reticle.position.copy(star.pos); reticle.material.opacity = star.item ? 0 : 0.9;
     tag.hide(); audio.play.select();
@@ -159,7 +150,7 @@ async function boot() {
   }
   function enterPlanet(item) { enterStar(stars.start[item.dom] + item.j); }
   function enterAt(galaxy, j) { enterStar(stars.start[galaxy] + j); }
-  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; beginArrival(k, "You have arrived / galaxy", `${fmt(manifest.galaxies[k].n)} datasets. A new world to explore.`); flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
+  function goDomain(k) { release(); audio.play.select(); activeDom = k; markDom(k); const G = galaxies[k]; beginArrival(k); flyTo(G.center.clone(), G.radius * 0.55); galaxyShards(manifest, k); setDestination("galaxy/" + k.toLowerCase()); }
   function randomJump() {
     const pickPlanet = Math.random() < 0.7 && planets.items.length;
     if (pickPlanet) { const it = planets.items[Math.floor(Math.random() * planets.items.length)]; enterPlanet(it); }
