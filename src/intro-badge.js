@@ -70,6 +70,11 @@ export function createIntroBadge(host, reducedMotion) {
   disc.position.copy(logoCenter);
   badge.add(disc);
   let disposed = false, lastSeconds = 0;
+  let springPosition = 0, springVelocity = 0, springTime = 0;
+  const ascent = time => {
+    const p = THREE.MathUtils.clamp(time / 2, 0, 1);
+    return p * p * p * (p * (p * 6 - 15) + 10);
+  };
   function render(seconds = lastSeconds) {
     lastSeconds = seconds;
     if (disposed || document.hidden) return;
@@ -78,16 +83,19 @@ export function createIntroBadge(host, reducedMotion) {
     // Asymmetric easing builds momentum early, then coasts longer, with zero endpoint velocity and acceleration.
     const easedSpin = spin ** 3 * (35 + spin * (-105 + spin * (126 + spin * (-70 + 15 * spin))));
     const drift = reducedMotion ? 0 : 1 - Math.exp(-t * t / 4);
-    const ascent = time => {
-      const p = THREE.MathUtils.clamp((time - 3.5) / 2, 0, 1);
-      return p * p * p * (p * (p * 6 - 15) + 10);
-    };
-    const lag = reducedMotion ? 0 : ascent(seconds) - ascent(seconds - .12);
-    const landingTime = reducedMotion ? 0 : Math.max(0, seconds - 5.5);
-    const rebound = Math.sin(landingTime * 8) * (1 - Math.exp(-landingTime * 12)) * Math.exp(-landingTime * 3);
-    disc.position.y = logoCenter.y - lag * 1.1 + rebound * .22;
+    if (t < springTime) springPosition = springVelocity = springTime = 0;
+    // One driven spring retains ascent momentum through the overshoot; fixed steps avoid frame-rate-dependent motion.
+    const step = 1 / 120;
+    while (!reducedMotion && springTime + step <= Math.min(t, 8)) {
+      const acceleration = 49 * (ascent(springTime + step) - springPosition) - 7 * springVelocity;
+      springVelocity += acceleration * step;
+      springPosition += springVelocity * step;
+      springTime += step;
+    }
+    const followThrough = reducedMotion ? 0 : (springPosition - ascent(t)) * 1.1;
+    disc.position.y = logoCenter.y + followThrough;
     disc.rotation.set(
-      -Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.52) * easedSpin + Math.sin(t * .38) * .025 * drift + rebound * .035,
+      -Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.52) * easedSpin + Math.sin(t * .38) * .025 * drift + followThrough * .16,
       Math.sin(t * .27) * .025 * drift,
       -.16 * easedSpin + Math.sin(t * .31) * .025 * drift,
       "ZYX",
