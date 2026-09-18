@@ -21,7 +21,8 @@ const CSS = `
 .uo-intro.intro-revealed .entry-facts{animation-delay:.4s}
 .uo-intro.intro-revealed .entry-button{animation-delay:.6s}
 .uo-intro.intro-revealed .entry-footer{animation-delay:.8s}
-@keyframes entry-reveal{from{clip-path:inset(100% -4px 0);transform:translateY(20px)}to{clip-path:inset(-4px -4px -4px);transform:translateY(0)}}
+/* Opposing translation and bottom clipping keep the reveal edge fixed as content rises through it. */
+@keyframes entry-reveal{from{clip-path:inset(-4px -4px 100%);transform:translateY(100%)}to{clip-path:inset(-4px -4px 0);transform:translateY(0)}}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
 .uo-intro .entry-badge canvas{z-index:0;top:-50%;height:200%}
