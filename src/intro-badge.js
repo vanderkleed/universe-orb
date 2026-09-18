@@ -16,7 +16,8 @@ export function createIntroBadge(host, reducedMotion) {
   renderer.domElement.setAttribute("aria-hidden", "true");
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
+  // Double-height overscan preserves the resting emblem scale and contains the face-on ring.
+  const camera = new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(2 * Math.atan(2 * Math.tan(THREE.MathUtils.degToRad(16)))), 1, .1, 100);
   camera.position.z = 18;
   const studio = new THREE.Scene();
   studio.background = new THREE.Color(0x161616);
@@ -68,21 +69,47 @@ export function createIntroBadge(host, reducedMotion) {
   const logoCenter = logoBounds.getCenter(new THREE.Vector3());
   disc.position.copy(logoCenter);
   badge.add(disc);
-  let disposed = false;
-  function render(seconds = 0) {
+  let disposed = false, lastSeconds = 0;
+  let springPosition = 0, springVelocity = 0, springTime = 0;
+  const ascent = time => {
+    const p = THREE.MathUtils.clamp(time / 2, 0, 1);
+    return p * p * p * (p * (p * 6 - 15) + 10);
+  };
+  function render(seconds = lastSeconds) {
+    lastSeconds = seconds;
     if (disposed || document.hidden) return;
-    const t = reducedMotion ? 0 : seconds;
-    // Keep forward pitch within 0.3–2 degrees so the near rim only dips slightly.
-    badge.rotation.set(.02 + Math.sin(t * .35) * .015, -.06 + Math.sin(t * .28) * .04, 0);
+    const t = reducedMotion ? 0 : Math.max(0, seconds - 3.5);
+    const spin = reducedMotion ? 1 : THREE.MathUtils.clamp((seconds - .35) / 3.1, 0, 1);
+    // Asymmetric easing builds momentum early, then coasts longer, with zero endpoint velocity and acceleration.
+    const easedSpin = spin ** 3 * (35 + spin * (-105 + spin * (126 + spin * (-70 + 15 * spin))));
+    const drift = reducedMotion ? 0 : 1 - Math.exp(-t * t / 4);
+    if (t < springTime) springPosition = springVelocity = springTime = 0;
+    // One driven spring retains ascent momentum through the overshoot; fixed steps avoid frame-rate-dependent motion.
+    const step = 1 / 120;
+    while (!reducedMotion && springTime + step <= Math.min(t, 8)) {
+      const acceleration = 49 * (ascent(springTime + step) - springPosition) - 7 * springVelocity;
+      springVelocity += acceleration * step;
+      springPosition += springVelocity * step;
+      springTime += step;
+    }
+    const followThrough = reducedMotion ? 0 : (springPosition - ascent(t)) * 1.1;
+    disc.position.y = logoCenter.y + followThrough;
+    disc.rotation.set(
+      -Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.52) * easedSpin + Math.sin(t * .38) * .025 * drift + followThrough * .16,
+      Math.sin(t * .27) * .025 * drift,
+      -.16 * easedSpin + Math.sin(t * .31) * .025 * drift,
+      "ZYX",
+    );
+    badge.rotation.set(.02 * easedSpin + Math.sin(t * .35) * .015 * drift, -.06 * easedSpin + Math.sin(t * .28) * .04 * drift, 0);
     renderer.render(scene, camera);
     host.classList.add("badge-ready");
   }
   const observer = new ResizeObserver(() => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
-    camera.aspect = width / height;
-    camera.position.z = Math.max(10, 4.9 / (Math.tan(THREE.MathUtils.degToRad(16)) * camera.aspect));
-    camera.updateProjectionMatrix(); renderer.setSize(width, height); render();
+    camera.aspect = width / (height * 2);
+    camera.position.z = Math.max(10, 4.9 / (Math.tan(THREE.MathUtils.degToRad(16)) * (width / height)));
+    camera.updateProjectionMatrix(); renderer.setSize(width, height * 2, false); render();
   });
   observer.observe(host);
   return {
