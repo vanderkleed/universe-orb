@@ -4,8 +4,9 @@
 //   warp      — the hyperspace jump, scheduled as one event and kept low and soft: a breath in,
 //               a rounded thud at the flash, a slow exhale
 //   tick      — a tiny blip when the scanner or a planet is hovered
-//   select    — a soft two-note chime when you commit to a dataset or galaxy
-//   arrive    — a brief, soft upper-register chime when the autopilot reaches its target
+//   select    — a short, muted tap when you commit to a dataset or galaxy
+//   contact   — a soft, unpitched touch as an image wraps onto the orb
+//   arrive    — silent to avoid stacking cues at the end of a flight
 const KEY = "universe-orb:sound";
 
 export function createAudio(opts = {}) {
@@ -71,18 +72,27 @@ export function createAudio(opts = {}) {
     o.onended = () => { o.disconnect(); e.disconnect(); };
     o.start(t); o.stop(t + d + 0.05);
   }
+  function touch({ duration, attack, cutoff, gain }) {
+    if (!on || !ctx) return;
+    const t = ctx.currentTime;
+    const source = ctx.createBufferSource(); source.buffer = noise;
+    const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = cutoff; filter.Q.value = 0.5;
+    const envelope = ctx.createGain();
+    envelope.gain.setValueAtTime(0, t);
+    envelope.gain.linearRampToValueAtTime(gain, t + attack);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    envelope.gain.linearRampToValueAtTime(0, t + duration + 0.01);
+    source.connect(filter); filter.connect(envelope); envelope.connect(master);
+    source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); };
+    source.start(t, Math.random() * (noise.duration - duration - 0.02));
+    source.stop(t + duration + 0.02);
+  }
   const play = {
     tick() { if (!on || !ctx) return; const now = ctx.currentTime; if (now - lastTick < 0.06) return; lastTick = now; tone(2200 + Math.random() * 400, { d: 0.05, g: 0.035, a: 0.002 }); },
-    select() { tone(523.25, { d: 0.5, g: 0.12 }); tone(783.99, { d: 0.7, g: 0.08, at: 0.09 }); },
-    arrive() {
-      tone(659.25, { a: 0.025, d: 0.45, g: 0.055 });
-      tone(987.77, { a: 0.035, d: 0.65, g: 0.035, at: 0.12 });
-    },
-    contact() {
-      tone(340, { a: 0.008, d: 0.38, g: 0.075, slide: 155 });
-      tone(690, { a: 0.012, d: 0.28, g: 0.025, slide: 410 });
-      tone(1010, { a: 0.004, d: 0.16, g: 0.009, slide: 720 });
-    },
+    select() { touch({ duration: 0.065, attack: 0.004, cutoff: 950, gain: 0.18 }); },
+    // Keep the caller contract without layering another sound over contact.
+    arrive() {},
+    contact() { touch({ duration: 0.16, attack: 0.025, cutoff: 600, gain: 0.1 }); },
     open() { tone(880, { d: 0.25, g: 0.04, slide: 1320 }); },
     close() { tone(880, { d: 0.2, g: 0.03, slide: 660 }); },
 
