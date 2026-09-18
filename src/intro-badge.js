@@ -68,12 +68,16 @@ export function createIntroBadge(host, reducedMotion) {
   const logoCenter = logoBounds.getCenter(new THREE.Vector3());
   disc.position.copy(logoCenter);
   badge.add(disc);
-  let disposed = false;
-  function render(seconds = 0) {
+  let disposed = false, lastSeconds = 0;
+  function render(seconds = lastSeconds) {
+    lastSeconds = seconds;
     if (disposed || document.hidden) return;
-    const t = reducedMotion ? 0 : seconds;
-    // Keep forward pitch within 0.3–2 degrees so the near rim only dips slightly.
-    badge.rotation.set(.02 + Math.sin(t * .35) * .015, -.06 + Math.sin(t * .28) * .04, 0);
+    const t = reducedMotion ? 0 : Math.max(0, seconds - 2.1);
+    const spin = reducedMotion ? 1 : THREE.MathUtils.clamp((seconds - .25) / 1.65, 0, 1);
+    const easedSpin = spin * spin * spin * (spin * (spin * 6 - 15) + 10);
+    // Begin edge-on and level; complete a full orbit before settling into the existing tilt.
+    disc.rotation.set(-Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.55) * easedSpin, 0, -.16 * easedSpin, "ZYX");
+    badge.rotation.set((.02 + Math.sin(t * .35) * .015) * easedSpin, (-.06 + Math.sin(t * .28) * .04) * easedSpin, 0);
     renderer.render(scene, camera);
     host.classList.add("badge-ready");
   }

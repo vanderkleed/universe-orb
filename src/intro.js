@@ -10,7 +10,15 @@ const CSS = `
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
 .uo-intro .entry-brand{display:block;width:104px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
-.uo-intro h1{font:300 clamp(38px,8.4vw,112px)/1.1 var(--sans);text-transform:uppercase;letter-spacing:.2em;text-indent:.2em;margin:0;text-wrap:balance}
+.uo-intro .entry-lockup{display:flex;align-items:center;gap:12px;color:var(--ink);font:400 16px/1.5 var(--sans)}
+.uo-intro h1{font:300 clamp(32px,5.4vw,76px)/1.15 var(--sans);text-transform:uppercase;letter-spacing:.14em;text-indent:.14em;margin:0;text-wrap:balance}
+.uo-intro:not(.intro-revealed) .entry-header,.uo-intro:not(.intro-revealed) .entry-footer,.uo-intro:not(.intro-revealed) .entry-center>:not(.entry-badge){visibility:hidden;opacity:0}
+.uo-intro.intro-revealed .entry-header,.uo-intro.intro-revealed .entry-footer,.uo-intro.intro-revealed .entry-center>:not(.entry-badge){animation:entry-reveal .8s cubic-bezier(.22,1,.36,1) both}
+.uo-intro.intro-revealed .entry-description{animation-delay:.12s}
+.uo-intro.intro-revealed .entry-facts{animation-delay:.22s}
+.uo-intro.intro-revealed .entry-button{animation-delay:.32s}
+.uo-intro.intro-revealed .entry-footer{animation-delay:.42s}
+@keyframes entry-reveal{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
 .uo-intro .entry-badge canvas{z-index:0}
@@ -36,11 +44,11 @@ const CSS = `
  .uo-intro .entry-header{gap:12px}
  .uo-intro .entry-center{gap:24px;padding:28px 0}
  .uo-intro .entry-badge{height:clamp(140px,23svh,210px)}
- .uo-intro h1{font-size:clamp(32px,9vw,64px);letter-spacing:.16em;text-indent:.16em}
+ .uo-intro h1{font-size:clamp(28px,7vw,44px);max-width:16ch;letter-spacing:.12em;text-indent:.12em}
  .uo-intro .entry-description{max-width:38ch;text-align:center;text-wrap:pretty}.uo-intro .entry-description-desktop{display:none}.uo-intro .entry-description-mobile{display:block}.uo-intro .entry-button{min-width:220px}
  .uo-intro .entry-footer{flex-direction:column;gap:8px;justify-content:center;text-align:center}.uo-intro .entry-desktop-hint{display:none}.uo-intro .entry-mobile-hint{display:inline}
 }
-@media(prefers-reduced-motion:reduce){.uo-intro,.uo-intro .entry-button{transition:none}}
+@media(prefers-reduced-motion:reduce){.uo-intro,.uo-intro .entry-button{transition:none}.uo-intro.intro-revealed .entry-header,.uo-intro.intro-revealed .entry-footer,.uo-intro.intro-revealed .entry-center>:not(.entry-badge){animation:none}}
 `;
 const description = "Every point of light is a dataset. Universe is a flyable map of Roboflow Universe: 330,000 public datasets rendered as stars, gathered into 18 galaxies by subject, from medical imaging to agriculture to sports. Fly toward anything and the nearest datasets resolve into photo planets you can open, with sample images, class breakdowns and a link straight to the dataset. The newest ones trail comets. The catalog rebuilds nightly from Universe itself, so it is never a snapshot; it is the live shape of what the computer vision community has built.";
 const fmt = n => Math.round(n).toLocaleString("en-US");
@@ -54,8 +62,8 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.className = "uo-intro";
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
-    <header class="entry-header"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"></header>
-    <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">Universe</h1>
+    <header class="entry-header"><div class="entry-lockup"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"><span>Universe</span></div></header>
+    <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">per data ad astra</h1>
       <p class="entry-description entry-description-desktop">${description}</p>
       <div class="entry-description entry-description-mobile">
         <p>Every point of light is a dataset. Fly through 330,000 public datasets across 18 galaxies. Discover images, explore classes, and open any dataset. Rebuilt nightly from Roboflow Universe.</p>
@@ -73,8 +81,17 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   mount.appendChild(root);
   const button = root.querySelector("button"), counter = root.querySelector(".entry-count");
   const canvas = root.querySelector("canvas"), context = canvas.getContext("2d");
-  const badge = createIntroBadge(root.querySelector(".entry-badge"), reduce);
+  const badgeHost = root.querySelector(".entry-badge");
+  const badge = createIntroBadge(badgeHost, reduce);
+  root.tabIndex = -1;
   let width = 0, height = 0, raf = 0, started = null, finished = false, timer = 0;
+  let centerOffset = 0, currentShift = 0, revealed = false;
+  function reveal() {
+    if (revealed || finished) return;
+    revealed = true;
+    root.classList.add("intro-revealed");
+    button.focus({ preventScroll: true });
+  }
   // Polar positions survive a viewport rotation without respawning the field.
   const stars = Array.from({ length: matchMedia("(max-width:720px)").matches ? 420 : 900 }, () => ({
     a: Math.random() * Math.PI * 2, r: Math.pow(Math.random(), .65) * .95,
@@ -83,7 +100,12 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   function draw(time = 0) {
     if (!context) return;
     if (started === null) started = time;
-    const seconds = reduce ? 4 : (time - started) / 1000;
+    const seconds = reduce ? 6 : (time - started) / 1000;
+    const slide = Math.max(0, Math.min(1, (seconds - 2.1) / 1.05));
+    const easedSlide = slide * slide * slide * (slide * (slide * 6 - 15) + 10);
+    currentShift = centerOffset * (1 - easedSlide);
+    badgeHost.style.transform = `translateY(${currentShift}px)`;
+    if (seconds >= 3.15) reveal();
     badge.update(seconds);
     context.clearRect(0, 0, width, height);
     const color = getComputedStyle(root).color;
@@ -94,12 +116,18 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
       context.beginPath(); context.arc(width / 2 + Math.cos(star.a) * radius, height / 2 + Math.sin(star.a) * radius * .7, star.size, 0, Math.PI * 2); context.fill();
     }
     context.globalAlpha = 1;
-    const progress = Math.min(1, seconds / 2.4);
+    const progress = Math.max(0, Math.min(1, (seconds - 3.15) / 1.4));
     counter.textContent = fmt(total * (1 - Math.pow(1 - progress, 3)));
     if (!reduce && !finished) raf = requestAnimationFrame(draw);
   }
   function size() {
     width = root.clientWidth; height = root.clientHeight;
+    const bounds = badgeHost.getBoundingClientRect();
+    centerOffset = height / 2 - (bounds.top - currentShift + bounds.height / 2);
+    if (started === null && !reduce) {
+      currentShift = centerOffset;
+      badgeHost.style.transform = `translateY(${currentShift}px)`;
+    }
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
     canvas.width = width * dpr; canvas.height = height * dpr;
     context?.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -125,7 +153,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.addEventListener("keydown", e => {
     e.stopPropagation();
     if (e.key === "Tab") {
-      const focusable = [...root.querySelectorAll("summary, button:not(:disabled)")].filter(el => el.getClientRects().length);
+      const focusable = [...root.querySelectorAll("summary, button:not(:disabled)")].filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== "hidden");
       const index = focusable.indexOf(document.activeElement);
       e.preventDefault();
       focusable[(index + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length]?.focus();
@@ -134,6 +162,6 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   });
   size(); addEventListener("resize", size);
   if (!reduce) raf = requestAnimationFrame(draw);
-  button.focus({ preventScroll: true });
+  if (!reduce) root.focus({ preventScroll: true });
   return { skip: enter, destroy: () => { const notify = !finished; finished = true; cleanup(); if (notify) onDone(); } };
 }
