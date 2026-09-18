@@ -25,7 +25,9 @@
   .flash{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(circle at 50% 50%,rgba(244,242,236,1) 0%,rgba(244,242,236,.35) 30%,rgba(244,242,236,0) 70%);opacity:0}
   nav{position:fixed;top:0;left:0;right:0;height:var(--nav);z-index:10;display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;border-bottom:1px solid var(--hair);background:linear-gradient(rgba(0,0,0,.85),rgba(0,0,0,.5));backdrop-filter:blur(6px)}
-  .wordmark{font-family:var(--sans);font-weight:500;font-size:18px;letter-spacing:-0.01em;display:flex;align-items:baseline;gap:10px}
+  .wordmark{display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans);flex-shrink:0}
+.wordmark img{display:block;width:104px;height:auto;filter:invert(1)}
+.wordmark span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
   .wordmark small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
   .navr{display:flex;align-items:center;gap:22px}
   .stats{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);display:flex;gap:22px;font-variant-numeric:tabular-nums}
@@ -225,7 +227,7 @@ body:not(.exploration-open) .hint{display:none}
   :root{--mobile-top:env(safe-area-inset-top,0px);--mobile-bottom:env(safe-area-inset-bottom,0px)}
   html,body{overscroll-behavior:none}
   nav,.exploration-open nav{height:calc(116px + var(--mobile-top));padding:0 12px;display:block;background:var(--ground)}
-  nav .wordmark{position:absolute;top:calc(12px + var(--mobile-top));left:max(16px,env(safe-area-inset-left));font-size:18px;line-height:44px}
+  nav .wordmark{position:absolute;top:calc(12px + var(--mobile-top));left:max(16px,env(safe-area-inset-left));line-height:44px}
   nav .navr,.exploration-open .navr{display:contents}
   #explore-toggle{position:absolute;top:calc(12px + var(--mobile-top));right:max(12px,env(safe-area-inset-right));box-sizing:border-box;min-height:44px;padding:0 16px;white-space:nowrap}
   nav .search,.exploration-open .search,nav .search:focus-within{position:absolute;left:12px;right:12px;top:calc(64px + var(--mobile-top));width:auto;min-width:0;max-width:none;height:44px;box-sizing:border-box}
