@@ -25,9 +25,11 @@
   .flash{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(circle at 50% 50%,rgba(244,242,236,1) 0%,rgba(244,242,236,.35) 30%,rgba(244,242,236,0) 70%);opacity:0}
   nav{position:fixed;top:0;left:0;right:0;height:var(--nav);z-index:10;display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;border-bottom:1px solid var(--hair);background:linear-gradient(rgba(0,0,0,.85),rgba(0,0,0,.5));backdrop-filter:blur(6px)}
-  .wordmark{display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans);flex-shrink:0}
-.wordmark img{display:block;width:104px;height:auto;filter:invert(1)}
-.wordmark span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
+  .wordmark{color:var(--ink);font:300 18px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.explorer-brand{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans);pointer-events:none;white-space:nowrap}
+.explorer-brand img{display:block;width:104px;height:auto;filter:invert(1)}
+.explorer-brand span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
+@media(min-width:721px){.exploration-open :is(.readout,.inst){bottom:60px}}
   .wordmark small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
   .navr{display:flex;align-items:center;gap:22px}
   .stats{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);display:flex;gap:22px;font-variant-numeric:tabular-nums}
@@ -224,7 +226,9 @@ body:not(.exploration-open) .hint{display:none}
 .selection-mobile-summary,.mobile-action-label,.touch-flight,.mobile-random{display:none}
 .title-open > :not(.uo-intro){visibility:hidden!important}
 @media(max-width:720px){
-  :root{--mobile-top:env(safe-area-inset-top,0px);--mobile-bottom:env(safe-area-inset-bottom,0px)}
+  :root{--mobile-top:env(safe-area-inset-top,0px);--mobile-bottom:calc(env(safe-area-inset-bottom,0px) + 32px)}
+  .explorer-brand{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  .wordmark{font-size:14px;letter-spacing:.04em}
   html,body{overscroll-behavior:none}
   nav,.exploration-open nav{height:calc(116px + var(--mobile-top));padding:0 12px;display:block;background:var(--ground)}
   nav .wordmark{position:absolute;top:calc(12px + var(--mobile-top));left:max(16px,env(safe-area-inset-left));line-height:44px}
@@ -284,9 +288,9 @@ html{background:var(--ground)}
 @property --ui-reveal{syntax:"<number>";inherits:true;initial-value:1}
 body{--ui-reveal:1;transition:--ui-reveal 2.6s cubic-bezier(.22,.61,.36,1) .35s}
 body.in-transit{--ui-reveal:0;transition:none}
-:is(nav,.rail,.strip,.readout,.inst,.tag,.location-label,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){filter:opacity(var(--ui-reveal))}
+:is(nav,.explorer-brand,.rail,.strip,.readout,.inst,.tag,.location-label,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){filter:opacity(var(--ui-reveal))}
 /* Visibility suppresses keyboard focus throughout travel; the reveal starts only on arrival. */
-.in-transit :is(nav,.rail,.strip,.readout,.inst,.tag,.location-label,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){visibility:hidden;pointer-events:none}
+.in-transit :is(nav,.explorer-brand,.rail,.strip,.readout,.inst,.tag,.location-label,.selection,.drawer,.intro,.hint,.epoch,.guide,.dlabel,.slabel,.uo-intro .t,.uo-intro .skip){visibility:hidden;pointer-events:none}
 @media(prefers-reduced-motion:reduce){body{transition:none}}
 @media(max-width:1100px){.wordmark small{display:none}.navr{gap:12px}}
 @media(min-width:721px){.mobile-guide{display:none}}
