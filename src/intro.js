@@ -1,7 +1,7 @@
 import { createIntroBadge } from "./intro-badge.js";
 
 // Universe title sequence — self-contained.
-// Mounts above the scene; the visitor starts the arrival flight with Enter Universe.
+// Mounts above the scene; the visitor starts the arrival flight with Explore.
 const CSS = `
 .uo-intro{position:fixed;inset:0;z-index:1000;background:var(--ground);color:var(--ink);overflow:auto;transition:opacity .65s ease;isolation:isolate}
 .uo-intro.out{opacity:0;pointer-events:none}
@@ -73,7 +73,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
         <details><summary><span class="entry-read-more">Read more</span><span class="entry-read-less">Read less</span></summary><p>${description}</p></details>
       </div>
       <div class="entry-facts"><span role="img" aria-label="${fmt(total)} public datasets"><strong class="entry-count" aria-hidden="true">${fmt(total)}</strong> <span aria-hidden="true">datasets</span></span><span><strong>${fmt(galaxies)}</strong> galaxies</span></div>
-      <button type="button" class="entry-button"><svg class="entry-button-frame" viewBox="0 0 200 52" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polygon points="9,1 191,1 199,9 199,43 191,51 9,51 1,43 1,9" vector-effect="non-scaling-stroke" /></svg>Enter Universe <span aria-hidden="true">↗</span></button>
+      <button type="button" class="entry-button"><svg class="entry-button-frame" viewBox="0 0 200 52" preserveAspectRatio="none" aria-hidden="true" focusable="false"><polygon points="9,1 191,1 199,9 199,43 191,51 9,51 1,43 1,9" vector-effect="non-scaling-stroke" /></svg>Explore <span aria-hidden="true">↗</span></button>
     </div>
     <footer class="entry-footer"><span>Real datasets. Endless discovery.</span><span class="entry-desktop-hint">Drag to look · Click to travel</span><span class="entry-mobile-hint">Drag to look · Tap to travel</span></footer>
   </div>`;
