@@ -1,28 +1,17 @@
-// Sound: a quiet synthesised score, nothing sampled. Off until the visitor turns it on (the choice is
-// remembered). Everything runs through one master gain so the toggle fades rather than cuts.
-//   ambient   — detuned low sines through a slow-breathing lowpass
+// Sound is opt-in and remembered. Music and effects share a master gain for smooth toggles.
+//   music     — the supplied background track, looped at a quiet level
 //   wind      — brown noise whose level and brightness follow the ship's speed
 //   warp      — the hyperspace jump, scheduled as one event and kept low and soft: a breath in,
 //               a rounded thud at the flash, a slow exhale
 //   tick      — a tiny blip when the scanner or a planet is hovered
 //   select    — a soft two-note chime when you commit to a dataset or galaxy
-//   arrive    — a low, warm settle when the autopilot reaches its target
+//   arrive    — a brief, soft upper-register chime when the autopilot reaches its target
 const KEY = "universe-orb:sound";
 
 export function createAudio(opts = {}) {
   let ctx = opts.context || null, master = null, on = false, built = false;
-  let wind = null, windFilter = null, padGain = null, noise = null;
-  let lastTick = 0;
-  // each galaxy transposes the pad a few semitones and recolours its inner interval (fifth / major
-  // third / minor third), so crossing into a sector is felt before it is read; interstellar = home key
-  const padOsc = []; let sector = 0;
-  const SEMIS = [0, 2, -3, 5, -5, 7, 3, -2], COLOR = [1.5, 1.2599, 1.1892];
-  function setSector(id) {
-    sector = id; if (!built) return;
-    const semi = id === 0 ? 0 : SEMIS[(id * 5) % 8], ratio = Math.pow(2, semi / 12), col = id === 0 ? 1.5 : COLOR[id % 3];
-    const t = ctx.currentTime;
-    for (const p of padOsc) p.o.frequency.setTargetAtTime((p.color ? 110 * col : p.base) * ratio, t, 2.5);
-  }
+  let wind = null, windFilter = null, musicGain = null, music = null, noise = null;
+  let pauseTimer = null, lastTick = 0;
   const remembered = (() => { try { return localStorage.getItem(KEY) === "on"; } catch { return false; } })();
 
   function noiseBuffer(seconds, brown) {
@@ -36,12 +25,16 @@ export function createAudio(opts = {}) {
     master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
     noise = noiseBuffer(3, false);
 
-    // ambient pad: low sines, an octave, a fifth and a detuned copy, very quiet, slowly breathing
-    padGain = ctx.createGain(); padGain.gain.value = 0.05; padGain.connect(master);
-    const padFilter = ctx.createBiquadFilter(); padFilter.type = "lowpass"; padFilter.frequency.value = 320; padFilter.connect(padGain);
-    [[55, 0], [110, 4], [164.8, -3], [220, 6]].forEach(([f, det]) => { const o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = f; o.detune.value = det; const g = ctx.createGain(); g.gain.value = f < 100 ? 1 : 0.35; o.connect(g); g.connect(padFilter); o.start(); padOsc.push({ o, base: f, color: f > 150 && f < 200 }); });
-    if (sector) setSector(sector);
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05; const lfoG = ctx.createGain(); lfoG.gain.value = 120; lfo.connect(lfoG); lfoG.connect(padFilter.frequency); lfo.start();
+    music = document.createElement("audio");
+    music.src = "/audio/background.mp3";
+    music.loop = true;
+    music.preload = "none";
+    music.hidden = true;
+    music.dataset.backgroundMusic = "";
+    document.body.append(music);
+    musicGain = ctx.createGain(); musicGain.gain.value = 0.45; musicGain.connect(master);
+    ctx.createMediaElementSource(music).connect(musicGain);
+    music.addEventListener("error", () => console.warn("Background music could not load; sound effects remain available."));
 
     // wind: brown noise through a lowpass whose cutoff and level follow speed
     const src = ctx.createBufferSource(); src.buffer = noiseBuffer(3, true); src.loop = true;
@@ -51,8 +44,20 @@ export function createAudio(opts = {}) {
   }
   function setOn(v) {
     on = v; try { localStorage.setItem(KEY, v ? "on" : "off"); } catch {}
-    if (v) { build(); if (ctx.resume) ctx.resume().catch(() => {}); master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0.5, ctx.currentTime, 0.6); }
-    else if (ctx) { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setTargetAtTime(0, ctx.currentTime, 0.25); }
+    clearTimeout(pauseTimer);
+    if (v) {
+      build();
+      if (ctx.resume) ctx.resume().catch(() => {});
+      music.play().catch(error => {
+        if (error.name !== "AbortError") console.warn("Background music playback was blocked; toggle Sound to retry.");
+      });
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setTargetAtTime(0.5, ctx.currentTime, 0.6);
+    } else if (master) {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setTargetAtTime(0, ctx.currentTime, 0.25);
+      pauseTimer = setTimeout(() => { if (!on) music.pause(); }, 1500);
+    }
     listeners.forEach(f => f(on));
   }
   const listeners = [];
@@ -69,7 +74,10 @@ export function createAudio(opts = {}) {
   const play = {
     tick() { if (!on || !ctx) return; const now = ctx.currentTime; if (now - lastTick < 0.06) return; lastTick = now; tone(2200 + Math.random() * 400, { d: 0.05, g: 0.035, a: 0.002 }); },
     select() { tone(523.25, { d: 0.5, g: 0.12 }); tone(783.99, { d: 0.7, g: 0.08, at: 0.09 }); },
-    arrive() { tone(130.81, { type: "triangle", d: 1.6, g: 0.14 }); tone(196, { d: 1.2, g: 0.05, at: 0.05 }); },
+    arrive() {
+      tone(659.25, { a: 0.025, d: 0.45, g: 0.055 });
+      tone(987.77, { a: 0.035, d: 0.65, g: 0.035, at: 0.12 });
+    },
     contact() {
       tone(340, { a: 0.008, d: 0.38, g: 0.075, slide: 155 });
       tone(690, { a: 0.012, d: 0.28, g: 0.025, slide: 410 });
@@ -114,13 +122,13 @@ export function createAudio(opts = {}) {
     if (!on || !ctx || ctx.state !== "running") return;
     const t = ctx.currentTime, k = 0.08;
     const s = Math.min(1, speed), w = Math.min(1, warp);
-    wind.gain.setTargetAtTime(0.02 + s * 0.12 + w * 0.1, t, k);
+    wind.gain.setTargetAtTime(s * 0.12 + w * 0.1, t, k);
     windFilter.frequency.setTargetAtTime(160 + s * 900 + w * 600, t, k);
-    padGain.gain.setTargetAtTime(0.05 * (1 - w * 0.7), t, k);
+    musicGain.gain.setTargetAtTime(0.45 * (1 - w * 0.3), t, 0.3);
   }
 
   // browsers require a gesture before audio can start: if sound was remembered on, arm it on the first one
   if (remembered && !opts.context) { const arm = () => { setOn(true); removeEventListener("pointerdown", arm); removeEventListener("keydown", arm); }; addEventListener("pointerdown", arm); addEventListener("keydown", arm); }
 
-  return { get on() { return on; }, remembered, toggle: () => setOn(!on), set: setOn, play, update, setSector, onChange: f => listeners.push(f), get context() { return ctx; } };
+  return { get on() { return on; }, remembered, toggle: () => setOn(!on), set: setOn, play, update, onChange: f => listeners.push(f), get context() { return ctx; } };
 }

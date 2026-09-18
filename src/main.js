@@ -380,8 +380,7 @@ async function boot() {
       const inside = dW < G.radius * 1.1; el.style.opacity = inside ? 0.22 : Math.max(0.3, Math.min(1, 1 - (dW - 200) / 500));
       el.style.transform = `translate(${(v3.x * 0.5 + 0.5) * innerWidth}px,${(-v3.y * 0.5 + 0.5) * innerHeight}px) translate(-50%,-50%)`; });
   }
-  let lastSector = -1;
-  function updateReadout() {
+    function updateReadout() {
     let key, name, meta;
     if (focus) { key = auto ? "Flying to" : "Holding at"; name = prettyName(focus.slug); meta = `<span>${focus.galaxy}</span><span>updated ${monthName(focus.lastmod)}</span>`; }
     else if (auto) { key = "Flying"; let g = null, gd = 1e9; domains.forEach(k => { const dd = galaxies[k].center.distanceTo(auto.target); if (dd < gd) { gd = dd; g = k; } }); const inG = gd < galaxies[g].radius * 1.2; name = inG ? g : "Open space"; meta = inG ? `<span>${fmt(manifest.galaxies[g].n)} datasets</span>` : ""; }
@@ -393,8 +392,7 @@ async function boot() {
     readout.set(key, name, meta);
     let g = null, gd = 1e9; domains.forEach(k => { const dd = galaxies[k].center.distanceTo(ship.position); if (dd < gd) { gd = dd; g = k; } });
     const inSector = gd < galaxies[g].radius * 1.15; readout.sector(inSector ? g : "Interstellar");
-    const sid = inSector ? galaxies[g].id : 0; if (sid !== lastSector) { lastSector = sid; audio.setSector(sid); }
-    readout.range(auto ? fmt(Math.max(0, Math.round(auto.target.distanceTo(ship.position) - auto.standoff))) : (focus ? "0" : "—"));
+        readout.range(auto ? fmt(Math.max(0, Math.round(auto.target.distanceTo(ship.position) - auto.standoff))) : (focus ? "0" : "—"));
   }
   buildRail(manifest, layout, goDomain);
 
