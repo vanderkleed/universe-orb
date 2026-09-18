@@ -10,7 +10,7 @@ const CSS = `
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
 .uo-intro .entry-brand{display:block;width:104px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
-.uo-intro .entry-lockup{display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans)}
+.uo-intro .entry-lockup{display:flex;align-items:baseline;gap:6px;color:var(--ink);font:500 22px/1 var(--sans)}
 /* Match the wordmark's 240-unit x-height and 8-unit baseline inset at 104px wide. */
 .uo-intro .entry-lockup span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
 .uo-intro h1{font:300 clamp(32px,5.4vw,60px)/1.15 var(--sans);text-transform:uppercase;letter-spacing:.14em;text-indent:.14em;margin:0;text-wrap:balance}

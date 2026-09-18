@@ -26,7 +26,7 @@
   nav{position:fixed;top:0;left:0;right:0;height:var(--nav);z-index:10;display:flex;align-items:center;justify-content:space-between;
     padding:0 20px;border-bottom:1px solid var(--hair);background:linear-gradient(rgba(0,0,0,.85),rgba(0,0,0,.5));backdrop-filter:blur(6px)}
   .wordmark{color:var(--ink);font:300 18px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
-.explorer-brand{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans);pointer-events:none;white-space:nowrap}
+.explorer-brand{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:baseline;gap:6px;color:var(--ink);font:500 22px/1 var(--sans);pointer-events:none;white-space:nowrap;opacity:.5}
 .explorer-brand img{display:block;width:104px;height:auto;filter:invert(1)}
 .explorer-brand span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
 @media(min-width:721px){.exploration-open :is(.readout,.inst){bottom:60px}}
