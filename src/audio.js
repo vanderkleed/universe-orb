@@ -4,10 +4,13 @@
 //   warp      — the hyperspace jump, scheduled as one event and kept low and soft: a breath in,
 //               a rounded thud at the flash, a slow exhale
 //   tick      — a tiny blip when the scanner or a planet is hovered
-//   select    — a short, muted tap when you commit to a dataset or galaxy
-//   contact   — a soft, unpitched touch as an image wraps onto the orb
+//   select    — a soft C4–G4 touch when you commit to a dataset or galaxy
+//   contact   — a warmer C3–G3 response as an image wraps onto the orb
 //   arrive    — silent to avoid stacking cues at the end of a flight
 const KEY = "universe-orb:sound";
+const pitch = midi => 440 * 2 ** ((midi - 69) / 12);
+const NOTE = { C1: pitch(24), C2: pitch(36), C3: pitch(48), G3: pitch(55), C4: pitch(60), G4: pitch(67), C5: pitch(72) };
+const FIFTH = 2 ** (7 / 12);
 
 export function createAudio(opts = {}) {
   let ctx = opts.context || null, master = null, on = false, built = false;
@@ -72,29 +75,26 @@ export function createAudio(opts = {}) {
     o.onended = () => { o.disconnect(); e.disconnect(); };
     o.start(t); o.stop(t + d + 0.05);
   }
-  function touch({ duration, attack, cutoff, gain }) {
-    if (!on || !ctx) return;
-    const t = ctx.currentTime;
-    const source = ctx.createBufferSource(); source.buffer = noise;
-    const filter = ctx.createBiquadFilter(); filter.type = "lowpass"; filter.frequency.value = cutoff; filter.Q.value = 0.5;
-    const envelope = ctx.createGain();
-    envelope.gain.setValueAtTime(0, t);
-    envelope.gain.linearRampToValueAtTime(gain, t + attack);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    envelope.gain.linearRampToValueAtTime(0, t + duration + 0.01);
-    source.connect(filter); filter.connect(envelope); envelope.connect(master);
-    source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); };
-    source.start(t, Math.random() * (noise.duration - duration - 0.02));
-    source.stop(t + duration + 0.02);
-  }
   const play = {
     tick() { if (!on || !ctx) return; const now = ctx.currentTime; if (now - lastTick < 0.06) return; lastTick = now; tone(2200 + Math.random() * 400, { d: 0.05, g: 0.035, a: 0.002 }); },
-    select() { touch({ duration: 0.065, attack: 0.004, cutoff: 950, gain: 0.18 }); },
+    select() {
+      tone(NOTE.C4, { a: 0.018, d: 0.24, g: 0.065 });
+      tone(NOTE.G4, { a: 0.025, d: 0.28, g: 0.018 });
+    },
     // Keep the caller contract without layering another sound over contact.
     arrive() {},
-    contact() { touch({ duration: 0.16, attack: 0.025, cutoff: 600, gain: 0.1 }); },
-    open() { tone(880, { d: 0.25, g: 0.04, slide: 1320 }); },
-    close() { tone(880, { d: 0.2, g: 0.03, slide: 660 }); },
+    contact() {
+      tone(NOTE.C3, { a: 0.045, d: 0.38, g: 0.055 });
+      tone(NOTE.G3, { a: 0.05, d: 0.42, g: 0.022 });
+    },
+    open() {
+      tone(NOTE.G4, { a: 0.02, d: 0.22, g: 0.025 });
+      tone(NOTE.C5, { a: 0.025, d: 0.28, g: 0.018, at: 0.07 });
+    },
+    close() {
+      tone(NOTE.C5, { a: 0.02, d: 0.18, g: 0.018 });
+      tone(NOTE.G4, { a: 0.025, d: 0.24, g: 0.022, at: 0.06 });
+    },
 
     // The jump, kept low and soft so it stays pleasant across many jumps: a deep breath in (a sub
     // tone rising with a warm harmonic above it), a rounded thud at the flash, and a slow low exhale
@@ -108,14 +108,14 @@ export function createAudio(opts = {}) {
       const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 0.8; lp.frequency.setValueAtTime(220, t0); lp.frequency.exponentialRampToValueAtTime(520, mid); lp.frequency.exponentialRampToValueAtTime(160, end);
       const ig = ctx.createGain(); ig.gain.setValueAtTime(0.0001, t0); ig.gain.exponentialRampToValueAtTime(0.42, mid); ig.gain.setValueAtTime(0.42, mid + 0.05); ig.gain.exponentialRampToValueAtTime(0.0001, end);
       lp.connect(ig); ig.connect(bus);
-      [[1, "sine", 1], [1.5, "triangle", 0.35], [2, "sine", 0.18]].forEach(([k, type, g]) => {
+      [[1, "sine", 1], [FIFTH, "triangle", 0.35], [2, "sine", 0.18]].forEach(([k, type, g]) => {
         const o = ctx.createOscillator(); o.type = type;
-        o.frequency.setValueAtTime(44 * k, t0); o.frequency.exponentialRampToValueAtTime(88 * k, mid); o.frequency.exponentialRampToValueAtTime(50 * k, end);
+        o.frequency.setValueAtTime(NOTE.C1 * k, t0); o.frequency.exponentialRampToValueAtTime(NOTE.C2 * k, mid); o.frequency.exponentialRampToValueAtTime(NOTE.C1 * k, end);
         const og = ctx.createGain(); og.gain.value = g; o.connect(og); og.connect(lp); o.start(t0); o.stop(end + 0.1);
       });
 
       // the thud at the flash: a rounded sine drop and a puff of low air
-      const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(74, mid); b.frequency.exponentialRampToValueAtTime(34, mid + 0.5);
+      const b = ctx.createOscillator(); b.type = "sine"; b.frequency.setValueAtTime(NOTE.C2, mid); b.frequency.exponentialRampToValueAtTime(NOTE.C1, mid + 0.5);
       const bg = ctx.createGain(); bg.gain.setValueAtTime(0.0001, mid - 0.01); bg.gain.linearRampToValueAtTime(0.55, mid + 0.02); bg.gain.exponentialRampToValueAtTime(0.0001, mid + 0.8);
       b.connect(bg); bg.connect(bus); b.start(mid - 0.01); b.stop(mid + 0.9);
 
