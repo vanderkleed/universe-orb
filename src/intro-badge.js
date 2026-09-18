@@ -16,7 +16,8 @@ export function createIntroBadge(host, reducedMotion) {
   renderer.domElement.setAttribute("aria-hidden", "true");
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, 1, .1, 100);
+  // Double-height overscan preserves the resting emblem scale and contains the face-on ring.
+  const camera = new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(2 * Math.atan(2 * Math.tan(THREE.MathUtils.degToRad(16)))), 1, .1, 100);
   camera.position.z = 18;
   const studio = new THREE.Scene();
   studio.background = new THREE.Color(0x161616);
@@ -72,21 +73,27 @@ export function createIntroBadge(host, reducedMotion) {
   function render(seconds = lastSeconds) {
     lastSeconds = seconds;
     if (disposed || document.hidden) return;
-    const t = reducedMotion ? 0 : Math.max(0, seconds - 2.1);
-    const spin = reducedMotion ? 1 : THREE.MathUtils.clamp((seconds - .25) / 1.65, 0, 1);
-    const easedSpin = spin * spin * spin * (spin * (spin * 6 - 15) + 10);
-    // Begin edge-on and level; complete a full orbit before settling into the existing tilt.
-    disc.rotation.set(-Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.55) * easedSpin, 0, -.16 * easedSpin, "ZYX");
-    badge.rotation.set((.02 + Math.sin(t * .35) * .015) * easedSpin, (-.06 + Math.sin(t * .28) * .04) * easedSpin, 0);
+    const t = reducedMotion ? 0 : Math.max(0, seconds - 3.5);
+    const spin = reducedMotion ? 1 : THREE.MathUtils.clamp((seconds - .35) / 3.1, 0, 1);
+    // Asymmetric easing builds momentum early, then coasts longer, with zero endpoint velocity and acceleration.
+    const easedSpin = spin ** 3 * (35 + spin * (-105 + spin * (126 + spin * (-70 + 15 * spin))));
+    const drift = reducedMotion ? 0 : 1 - Math.exp(-t * t / 4);
+    disc.rotation.set(
+      -Math.PI / 2 + (Math.PI * 2 + Math.PI / 2 - 1.52) * easedSpin + Math.sin(t * .38) * .025 * drift,
+      Math.sin(t * .27) * .025 * drift,
+      -.16 * easedSpin + Math.sin(t * .31) * .025 * drift,
+      "ZYX",
+    );
+    badge.rotation.set(.02 * easedSpin + Math.sin(t * .35) * .015 * drift, -.06 * easedSpin + Math.sin(t * .28) * .04 * drift, 0);
     renderer.render(scene, camera);
     host.classList.add("badge-ready");
   }
   const observer = new ResizeObserver(() => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
-    camera.aspect = width / height;
-    camera.position.z = Math.max(10, 4.9 / (Math.tan(THREE.MathUtils.degToRad(16)) * camera.aspect));
-    camera.updateProjectionMatrix(); renderer.setSize(width, height); render();
+    camera.aspect = width / (height * 2);
+    camera.position.z = Math.max(10, 4.9 / (Math.tan(THREE.MathUtils.degToRad(16)) * (width / height)));
+    camera.updateProjectionMatrix(); renderer.setSize(width, height * 2, false); render();
   });
   observer.observe(host);
   return {

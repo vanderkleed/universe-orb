@@ -10,18 +10,20 @@ const CSS = `
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
 .uo-intro .entry-brand{display:block;width:104px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
-.uo-intro .entry-lockup{display:flex;align-items:center;gap:12px;color:var(--ink);font:400 16px/1.5 var(--sans)}
-.uo-intro h1{font:300 clamp(32px,5.4vw,76px)/1.15 var(--sans);text-transform:uppercase;letter-spacing:.14em;text-indent:.14em;margin:0;text-wrap:balance}
+.uo-intro .entry-lockup{display:flex;align-items:flex-end;gap:12px;color:var(--ink);font:500 16px/1 var(--sans)}
+.uo-intro .entry-lockup span{letter-spacing:.08em;transform:translateY(3px)}
+.uo-intro h1{font:300 clamp(32px,5.4vw,60px)/1.15 var(--sans);text-transform:uppercase;letter-spacing:.14em;text-indent:.14em;margin:0;text-wrap:balance}
+.uo-intro .entry-description.entry-description-desktop{width:var(--entry-copy-width,640px);max-width:100%}
 .uo-intro:not(.intro-revealed) .entry-header,.uo-intro:not(.intro-revealed) .entry-footer,.uo-intro:not(.intro-revealed) .entry-center>:not(.entry-badge){visibility:hidden;opacity:0}
-.uo-intro.intro-revealed .entry-header,.uo-intro.intro-revealed .entry-footer,.uo-intro.intro-revealed .entry-center>:not(.entry-badge){animation:entry-reveal .8s cubic-bezier(.22,1,.36,1) both}
-.uo-intro.intro-revealed .entry-description{animation-delay:.12s}
-.uo-intro.intro-revealed .entry-facts{animation-delay:.22s}
-.uo-intro.intro-revealed .entry-button{animation-delay:.32s}
-.uo-intro.intro-revealed .entry-footer{animation-delay:.42s}
+.uo-intro.intro-revealed .entry-header,.uo-intro.intro-revealed .entry-footer,.uo-intro.intro-revealed .entry-center>:not(.entry-badge){animation:entry-reveal 1.5s cubic-bezier(.25,.1,.25,1) both}
+.uo-intro.intro-revealed .entry-description{animation-delay:.2s}
+.uo-intro.intro-revealed .entry-facts{animation-delay:.4s}
+.uo-intro.intro-revealed .entry-button{animation-delay:.6s}
+.uo-intro.intro-revealed .entry-footer{animation-delay:.8s}
 @keyframes entry-reveal{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
-.uo-intro .entry-badge canvas{z-index:0}
+.uo-intro .entry-badge canvas{z-index:0;top:-50%;height:200%}
 .uo-intro .entry-badge.badge-ready img{opacity:0}
 .uo-intro .entry-description{font:400 14px/1.6 var(--mono);color:var(--mute);width:100%;max-width:76ch;margin:0;text-align:left;text-wrap:pretty}
 .uo-intro .entry-button{position:relative;font:500 16px/1.5 var(--sans);background:transparent;color:var(--ink);border:0;border-radius:0;min-height:52px;min-width:200px;padding:0 24px;cursor:pointer}
@@ -50,7 +52,7 @@ const CSS = `
 }
 @media(prefers-reduced-motion:reduce){.uo-intro,.uo-intro .entry-button{transition:none}.uo-intro.intro-revealed .entry-header,.uo-intro.intro-revealed .entry-footer,.uo-intro.intro-revealed .entry-center>:not(.entry-badge){animation:none}}
 `;
-const description = "Every point of light is a dataset. Universe is a flyable map of Roboflow Universe: 330,000 public datasets rendered as stars, gathered into 18 galaxies by subject, from medical imaging to agriculture to sports. Fly toward anything and the nearest datasets resolve into photo planets you can open, with sample images, class breakdowns and a link straight to the dataset. The newest ones trail comets. The catalog rebuilds nightly from Universe itself, so it is never a snapshot; it is the live shape of what the computer vision community has built.";
+const description = "Every point of light is a dataset. Per Data Ad Astra is a flyable map of Roboflow Universe: 330,000 public datasets rendered as stars, gathered into 18 galaxies by subject, from medical imaging to agriculture to sports. Fly toward anything and the nearest datasets resolve into image orbs you can open, with sample images, class breakdowns and a link straight to the dataset. The catalog rebuilds nightly from Universe itself, so it is never a snapshot; it is the live shape of what the computer vision community has built, one contribution at a time.";
 const fmt = n => Math.round(n).toLocaleString("en-US");
 
 export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mount = document.body } = {}) {
@@ -62,7 +64,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.className = "uo-intro";
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
-    <header class="entry-header"><div class="entry-lockup"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"><span>Universe</span></div></header>
+    <header class="entry-header"><div class="entry-lockup"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"><span>UNIVERSE</span></div></header>
     <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">per data ad astra</h1>
       <p class="entry-description entry-description-desktop">${description}</p>
       <div class="entry-description entry-description-mobile">
@@ -100,12 +102,12 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   function draw(time = 0) {
     if (!context) return;
     if (started === null) started = time;
-    const seconds = reduce ? 6 : (time - started) / 1000;
-    const slide = Math.max(0, Math.min(1, (seconds - 2.1) / 1.05));
+    const seconds = reduce ? 10 : (time - started) / 1000;
+    const slide = Math.max(0, Math.min(1, (seconds - 3.5) / 2));
     const easedSlide = slide * slide * slide * (slide * (slide * 6 - 15) + 10);
     currentShift = centerOffset * (1 - easedSlide);
     badgeHost.style.transform = `translateY(${currentShift}px)`;
-    if (seconds >= 3.15) reveal();
+    if (seconds >= 5.05) reveal();
     badge.update(seconds);
     context.clearRect(0, 0, width, height);
     const color = getComputedStyle(root).color;
@@ -116,12 +118,13 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
       context.beginPath(); context.arc(width / 2 + Math.cos(star.a) * radius, height / 2 + Math.sin(star.a) * radius * .7, star.size, 0, Math.PI * 2); context.fill();
     }
     context.globalAlpha = 1;
-    const progress = Math.max(0, Math.min(1, (seconds - 3.15) / 1.4));
+    const progress = Math.max(0, Math.min(1, (seconds - 5.45) / 2));
     counter.textContent = fmt(total * (1 - Math.pow(1 - progress, 3)));
     if (!reduce && !finished) raf = requestAnimationFrame(draw);
   }
   function size() {
     width = root.clientWidth; height = root.clientHeight;
+    root.style.setProperty("--entry-copy-width", `${root.querySelector("h1").offsetWidth}px`);
     const bounds = badgeHost.getBoundingClientRect();
     centerOffset = height / 2 - (bounds.top - currentShift + bounds.height / 2);
     if (started === null && !reduce) {
@@ -161,6 +164,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
     if (e.key === "Escape") enter();
   });
   size(); addEventListener("resize", size);
+  document.fonts.ready.then(() => { if (!finished) size(); });
   if (!reduce) raf = requestAnimationFrame(draw);
   if (!reduce) root.focus({ preventScroll: true });
   return { skip: enter, destroy: () => { const notify = !finished; finished = true; cleanup(); if (notify) onDone(); } };
