@@ -26,7 +26,7 @@ export function createAudio(opts = {}) {
     noise = noiseBuffer(3, false);
 
     music = document.createElement("audio");
-    music.src = "/audio/background.mp3";
+    music.src = "/audio/background.mp3?v=2";
     music.loop = true;
     music.preload = "none";
     music.hidden = true;

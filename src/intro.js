@@ -10,8 +10,9 @@ const CSS = `
 .uo-intro .entry-header,.uo-intro .entry-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;font:14px/1.5 var(--sans);color:var(--mute)}
 .uo-intro .entry-brand{display:block;width:104px;height:auto;filter:invert(1)}
 .uo-intro .entry-center{display:flex;flex-direction:column;align-items:center;gap:28px;text-align:center;padding:64px 0}
-.uo-intro .entry-lockup{display:flex;align-items:flex-end;gap:12px;color:var(--ink);font:500 16px/1 var(--sans)}
-.uo-intro .entry-lockup span{letter-spacing:.08em;transform:translateY(3px)}
+.uo-intro .entry-lockup{display:flex;align-items:baseline;gap:12px;color:var(--ink);font:500 22px/1 var(--sans)}
+/* Match the wordmark's 240-unit x-height and 8-unit baseline inset at 104px wide. */
+.uo-intro .entry-lockup span{font-size-adjust:.5174;letter-spacing:.01em;transform:translateY(-.38px)}
 .uo-intro h1{font:300 clamp(32px,5.4vw,60px)/1.15 var(--sans);text-transform:uppercase;letter-spacing:.14em;text-indent:.14em;margin:0;text-wrap:balance}
 .uo-intro .entry-description.entry-description-desktop{width:var(--entry-copy-width,640px);max-width:100%}
 .uo-intro:not(.intro-revealed) .entry-header,.uo-intro:not(.intro-revealed) .entry-footer,.uo-intro:not(.intro-revealed) .entry-center>:not(.entry-badge){visibility:hidden;opacity:0}
@@ -20,7 +21,7 @@ const CSS = `
 .uo-intro.intro-revealed .entry-facts{animation-delay:.4s}
 .uo-intro.intro-revealed .entry-button{animation-delay:.6s}
 .uo-intro.intro-revealed .entry-footer{animation-delay:.8s}
-@keyframes entry-reveal{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes entry-reveal{from{clip-path:inset(100% -4px 0);transform:translateY(20px)}to{clip-path:inset(-4px -4px -4px);transform:translateY(0)}}
 .uo-intro .entry-badge{position:relative;width:min(560px,100%);height:clamp(150px,24vh,270px);flex-shrink:0}
 .uo-intro .entry-badge img{width:100%;height:100%;object-fit:contain;filter:grayscale(1);transition:opacity .2s}
 .uo-intro .entry-badge canvas{z-index:0;top:-50%;height:200%}
@@ -64,7 +65,7 @@ export function playIntro({ total = 330601, galaxies = 18, onDone = () => {}, mo
   root.className = "uo-intro";
   root.setAttribute("role", "dialog"); root.setAttribute("aria-modal", "true"); root.setAttribute("aria-labelledby", "entry-title");
   root.innerHTML = `<canvas aria-hidden="true"></canvas><div class="entry-layout">
-    <header class="entry-header"><div class="entry-lockup"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"><span>UNIVERSE</span></div></header>
+    <header class="entry-header"><div class="entry-lockup"><img class="entry-brand" src="/images/roboflow-wordmark-black.svg" alt="Roboflow" width="132" height="24"><span>universe</span></div></header>
     <div class="entry-center"><div class="entry-badge" role="img" aria-label="Metallic Roboflow Universe badge"><img src="/images/roboflow-logomark.svg" alt="" width="2501" height="2500"></div><h1 id="entry-title">per data ad astra</h1>
       <p class="entry-description entry-description-desktop">${description}</p>
       <div class="entry-description entry-description-mobile">
