@@ -6,7 +6,7 @@ import { createSearch } from "./search.js";
 import { createAudio } from "./audio.js";
 import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING } from "./textures.js";
-import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, openDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
+import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, openDrawer, toggleFullscreen, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
 import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
 import { createOrbSurface } from "./orb-surface.js";
@@ -329,7 +329,7 @@ async function boot() {
     if (e.key === "Shift") keys.boost = 1;
     const k = keyMap[e.key.toLowerCase()]; if (k && !e.metaKey && !e.ctrlKey) { keys[k] = 1; e.preventDefault(); return; }
     if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); $("q").focus(); $("q").select(); return; }
-    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } if ($("drawer").classList.contains("open")) { closeDrawer(); return; } if (document.body.classList.contains("exploration-open")) { setExploration(false); $("explore-toggle").focus(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); });
+    if (e.key === "Escape") { if (!$("guide").hidden) { closeGuide(); return; } if ($("drawer").classList.contains("open")) { closeDrawer(); return; } if (document.body.classList.contains("exploration-open")) { setExploration(false); $("explore-toggle").focus(); return; } release(true); } if (e.key === "r" || e.key === "R") randomJump(); if (e.key === "b" || e.key === "B") bigbang(); if (e.key === "m" || e.key === "M") tCamDist = tCamDist > 60 ? 6.5 : 180; if (e.key === "v" || e.key === "V") audio.toggle(); if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey) toggleFullscreen(); });
   addEventListener("keyup", e => { if (e.key === "Shift") keys.boost = 0; const k = keyMap[e.key.toLowerCase()]; if (k) keys[k] = 0; });
   addEventListener("blur", () => { keys.w = keys.s = keys.a = keys.d = keys.l = keys.r = keys.q = keys.e = keys.boost = 0; });
   addEventListener("resize", onResize); function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight, false); } onResize();
