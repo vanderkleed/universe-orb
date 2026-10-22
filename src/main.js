@@ -20,7 +20,11 @@ function setDestination(destination) {
 }
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const audio = createAudio();
-{ const b = $("snd"); const label = on => { b.innerHTML = `Sound ${on ? "on" : "off"} <kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
+{ const b = $("snd");
+  const SPEAKER = `<path d="M2.5 6h2.2L8 3.2v9.6L4.7 10H2.5z"/>`;
+  const ICON_ON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SPEAKER}<path d="M10.5 5.8a3 3 0 0 1 0 4.4M12.4 3.9a5.6 5.6 0 0 1 0 8.2"/></svg>`;
+  const ICON_OFF = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SPEAKER}<path d="M10.8 6.2l3.2 3.6M14 6.2l-3.2 3.6"/></svg>`;
+  const label = on => { b.innerHTML = `${on ? ICON_ON : ICON_OFF}<span class="snd-label">Sound ${on ? "on" : "off"}</span><kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on"); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
 
 async function boot() {
   const manifest = await loadManifest();
