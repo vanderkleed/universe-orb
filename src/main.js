@@ -26,11 +26,15 @@ const audio = createAudio();
   const ICON_OFF = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SPEAKER}<path d="M10.8 6.2l3.2 3.6M14 6.2l-3.2 3.6"/></svg>`;
   const label = on => { b.innerHTML = `${on ? ICON_ON : ICON_OFF}<span class="snd-label">Sound ${on ? "on" : "off"}</span><kbd>V</kbd>`; b.setAttribute("aria-pressed", String(on)); b.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on"); b.classList.toggle("on", on); }; label(audio.on); audio.onChange(label); b.addEventListener("click", () => audio.toggle()); }
 
+// the opening holds on the badge until the scene is actually built, however slow the network
+let markReady = () => {};
+const sceneReady = new Promise(res => { markReady = res; });
+
 async function boot() {
   const manifest = await loadManifest();
   $("intro").classList.add("gone");
   // the title sequence plays over the loading and the build; arrival waits for it to hand off
-  const introDone = new Promise(res => playIntro({ total: manifest.total, galaxies: Object.keys(manifest.galaxies).filter(k => k !== "Uncharted").length, onDone: res }));
+  const introDone = new Promise(res => playIntro({ ready: sceneReady, onDone: res }));
   const imagery = await loadImagery();
   const layout = buildLayout(manifest);
   const { domains, galaxies } = layout;
@@ -540,6 +544,7 @@ async function boot() {
     if (frame % 4 === 1) scan();
   }
   loop();
+  markReady();
 
   // arrive: from far outside, on a hyperspace flight into a galaxy (or the dataset in the URL)
   introDone.then(async () => {
@@ -561,4 +566,4 @@ async function boot() {
   }
   window.__u = { ship, camera, stars, planets, galaxies, enterStar, enterAt, goDomain, randomJump, bigbang, comets, search, audio, keys, get births() { return births; }, get speed() { return speed; }, get yaw() { return yaw; }, get pitch() { return pitch; }, get focus() { return focus; }, get auto() { return auto; }, get warp() { return warp; } };
 }
-boot().catch(e => { console.error(e); $("intro-p").textContent = "Could not load the index. " + e.message; });
+boot().catch(e => { console.error(e); $("intro").classList.remove("gone"); $("intro-p").textContent = "Could not load the index. " + e.message; markReady(); });
