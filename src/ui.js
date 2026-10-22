@@ -5,8 +5,7 @@ const $ = id => document.getElementById(id);
 
 export function buildRail(manifest, layout, onGalaxy) {
   const rail = $("rail"), strip = $("strip");
-  rail.innerHTML = `<div class="h">Galaxies</div>` + layout.domains.map(k => `<button data-d="${k}"><i>${fmt(manifest.galaxies[k].n)}</i>${k}</button>`).join("")
-    + `<div class="h" style="margin-top:12px">Interstellar</div><div style="color:var(--dim);display:flex;gap:10px"><i style="font-style:normal;min-width:6ch;text-align:right">${fmt(manifest.galaxies.Uncharted?.n || 0)}</i>uncharted</div>`;
+  rail.innerHTML = `<div class="h">Industries</div>` + layout.domains.map(k => `<button data-d="${k}"><i>${fmt(manifest.galaxies[k].n)}</i>${k}</button>`).join("");
   strip.innerHTML = layout.domains.map(k => `<button data-d="${k}">${k}</button>`).join("");
   document.querySelectorAll("[data-d]").forEach(b => b.addEventListener("click", () => onGalaxy(b.dataset.d)));
   $("stats").innerHTML = `<span><b>${fmt(manifest.total)}</b> datasets</span><span><b>${layout.domains.length}</b> galaxies</span><span><b>${fmt(manifest.imaged)}</b> with imagery</span>`;
@@ -114,7 +113,7 @@ export function placeSelection(x, y, radius, visible) {
     });
   }
 }
-$("selection-details").addEventListener("click", () => { if (selected) openDrawer(selected); });
+$("selection-details").addEventListener("click", () => { if (!selected) return; if (drawer.classList.contains("open")) closeDrawer(); else openDrawer(selected); });
 $("selection-leave").addEventListener("click", () => window.dispatchEvent(new CustomEvent("orb:release")));
 
 /* ---------- drawer ---------- */
@@ -129,7 +128,7 @@ export function closeDrawer() {
   $("selection-details").setAttribute("aria-expanded", "false");
   if (hadFocus) (selected ? $("selection-details") : $("gl")).focus({ preventScroll: true });
 }
-export function openDrawer(star) {
+export function openDrawer(star, { focus = true } = {}) {
   setExploration(false);
   // star: { slug, galaxy, lastmod, cover }
   current = star; const { slug } = star;
@@ -145,7 +144,7 @@ export function openDrawer(star) {
   drawer.classList.add("open"); drawer.setAttribute("aria-hidden", "false"); drawer.inert = false; body.scrollTop = 0;
   document.body.classList.add("details-open");
   $("selection-details").setAttribute("aria-expanded", "true");
-  $("dr-close").focus();
+  if (focus) $("dr-close").focus({ preventScroll: true });
 
   imageryFor(slug).then(im => {
     if (current !== star) return;
