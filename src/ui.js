@@ -45,6 +45,23 @@ export function setExploration(open) {
 }
 $("explore-toggle").addEventListener("click", () => setExploration(!document.body.classList.contains("exploration-open")));
 
+/* ---------- full screen ---------- */
+const fsBtn = $("fs");
+function syncFullscreen() {
+  const full = !!document.fullscreenElement;
+  fsBtn.classList.toggle("is-full", full);
+  fsBtn.setAttribute("aria-pressed", String(full));
+  fsBtn.setAttribute("aria-label", full ? "Exit full screen" : "Enter full screen");
+}
+export function toggleFullscreen() {
+  if (!document.fullscreenEnabled) return;
+  const change = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  change.then(syncFullscreen, syncFullscreen);
+}
+if (!document.fullscreenEnabled) fsBtn.hidden = true;
+fsBtn.addEventListener("click", toggleFullscreen);
+document.addEventListener("fullscreenchange", syncFullscreen);
+
 let selected = null, orbitRadius = null;
 export function showSelection(star) {
   selected = star;
