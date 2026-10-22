@@ -320,3 +320,10 @@ body.in-transit{--ui-reveal:0;transition:none}
   .drawer .top span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 @media(max-width:720px){.strip button{font-family:var(--sans);border-radius:6px;color:var(--mute)}.strip button.on{color:var(--ink)}}
+/* Full screen toggle: a quiet square beside Random jump; phones hide it (iOS has no page full screen). */
+#fs{box-sizing:border-box;width:42px;height:42px;padding:0;justify-content:center}
+#fs[hidden]{display:none}
+#fs svg{width:16px;height:16px}
+#fs .collapse,#fs.is-full .expand{display:none}
+#fs.is-full .collapse{display:block}
+@media(max-width:720px){#fs{display:none}}
