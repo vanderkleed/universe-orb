@@ -327,7 +327,7 @@ body.in-transit{--ui-reveal:0;transition:none}
 #fs .collapse,#fs.is-full .expand{display:none}
 #fs.is-full .collapse{display:block}
 @media(max-width:720px){#fs{display:none}}
-/* Sound toggle: a quiet square beside full screen on desktop; phones keep it in the Explore row. */
+/* Sound toggle: a quiet square beside full screen on desktop; on phones it stays in the Explore row. */
 #snd svg{width:16px;height:16px;flex-shrink:0}
 @media(min-width:721px){
   #snd{box-sizing:border-box;width:42px;height:42px;padding:0;justify-content:center}
