@@ -6,7 +6,7 @@ import { createSearch } from "./search.js";
 import { createAudio } from "./audio.js";
 import { buildPlanets } from "./planets.js";
 import { HAZE, DOT, RING } from "./textures.js";
-import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
+import { buildRail, markDom, makeLabels, makeScanPool, readout, tag, closeDrawer, openDrawer, showSelection, clearSelection, placeSelection, setExploration } from "./ui.js";
 import { thumbUrl } from "./data.js";
 import { playIntro } from "./intro.js";
 import { createOrbSurface } from "./orb-surface.js";
@@ -117,7 +117,11 @@ async function boot() {
   function finishArrival() {
     if (!destination) return;
     document.body.classList.remove("in-transit");
-    if (focus) { orbSurface.arrive(); showSelection(focus); }
+    if (focus) {
+      orbSurface.arrive(); showSelection(focus);
+      // On desktop the details panel opens alongside the flight; phones keep the lighter summary.
+      if (!matchMedia("(max-width:720px)").matches) openDrawer(focus, { focus: false });
+    }
     destination = null;
   }
   function release(closeToo) {
